@@ -9,6 +9,16 @@
     "astro": "astro"
   },
   "dependencies": {
-    "astro": "^5.7.12"
+    "@astrojs/alpinejs": "^0.4.8",
+    "@tailwindcss/vite": "^4.1.6",
+    "@types/alpinejs": "^3.13.11",
+    "alpinejs": "^3.14.9",
+    "astro": "^5.7.12",
+    "tailwindcss": "^4.1.6"
+  },
+  "devDependencies": {
+    "daisyui": "^5.0.35",
+    "prettier": "3.5.3",
+    "prettier-plugin-astro": "0.14.1"
   }
 }
