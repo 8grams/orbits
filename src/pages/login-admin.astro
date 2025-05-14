@@ -1,0 +1,87 @@
+---
+import Layout from "../layouts/Layout.astro";
+
+const url = new URL(Astro.request.url);
+const showError = url.searchParams.get("error") === "1";
+
+if (Astro.request.method === "POST") {
+  const data = await Astro.request.formData();
+  if (
+    data.get("username") === import.meta.env.ADMIN_USERNAME &&
+    data.get("password") === import.meta.env.ADMIN_PASSWORD
+  ) {
+    Astro?.session?.set("username", {
+      username: data.get("username"),
+      role: "ADMIN",
+      name: "ADMIN",
+      avatar: null,
+    });
+    return Astro.redirect("/dashboard");
+  } else {
+    return Astro.redirect("/login-admin?error=1");
+  }
+}
+---
+
+<Layout pageTitle="Login Admin">
+  <section class="h-screen flex items-center justify-center">
+    <div class="toast toast-top toast-end" id="toast-container"></div>
+    <div class="card w-full max-w-md shadow-xl bg-base-100">
+      <div class="card-body flex flex-col gap-6">
+        <h2 class="card-title justify-center">Orbits</h2>
+        {
+          showError && (
+            <div class="alert alert-error alert-soft mb-4 rounded-none">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-6 w-6 shrink-0 stroke-current"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              Incorrect username or password
+            </div>
+          )
+        }
+        <form
+          method="POST"
+          action="/login-admin"
+          class="flex flex-col gap-4"
+          enctype="multipart/form-data"
+        >
+          <div class="flex flex-col gap-2">
+            <label for="username">Username</label>
+            <input
+              id="username"
+              type="text"
+              name="username"
+              placeholder="Input Username"
+              class="input input-bordered w-full rounded-none"
+            />
+          </div>
+          <div class="flex flex-col gap-2">
+            <label for="password">Password</label>
+            <input
+              id="password"
+              type="password"
+              name="password"
+              placeholder="Input password"
+              class="input input-bordered w-full rounded-none"
+            />
+          </div>
+          <div class="card-actions justify-end">
+            <button class="btn btn-neutral w-full rounded-none" type="submit"
+              >Login</button
+            >
+          </div>
+        </form>
+      </div>
+    </div>
+  </section>
+</Layout>
