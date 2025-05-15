@@ -1,0 +1,159 @@
+---
+import Dashboard from "../../layouts/Dashboard.astro";
+import { openDB } from "../../utils/db";
+import { Icons } from "../../utils/icons";
+import UsersCreateOrUpdateModal from "./users-create-or-update-modal.astro";
+import UsersDelete from "./users-delete.astro";
+
+const db = await openDB();
+
+const search = Astro.url.searchParams.get("search") || "";
+const role = Astro.url.searchParams.get("role") || "all";
+
+const users = await db.all(
+  `SELECT * FROM users WHERE email LIKE ? AND role LIKE ?`,
+  [`%${search}%`, role === "all" ? "%" : role],
+);
+---
+
+<Dashboard pageTitle="Users">
+  <section
+    slot="content"
+    class="card bg-white w-full rounded-none py-12 px-12 shadow-sm flex flex-col gap-8"
+    x-data="{ selectedUserId: null, selectedUser: null }"
+  >
+    <div class="flex justify-between items-center gap-4 flex-wrap">
+      <h2 class="text-xl font-semibold">Users</h2>
+      <div class="flex items-center gap-4">
+        <div
+          x-data="{
+          search: new URLSearchParams(window.location.search).get('search') || '',
+          updateSearch() {
+            const params = new URLSearchParams(window.location.search);
+            if (this.search) {
+              params.set('search', this.search);
+            } else {
+              params.delete('search');
+            }
+            window.location.search = params.toString();
+          }
+  }"
+        >
+          <label class="input rounded-none w-[220px]">
+            <svg
+              class="h-[1em] opacity-50"
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+            >
+              <g
+                stroke-linejoin="round"
+                stroke-linecap="round"
+                stroke-width="2.5"
+                fill="none"
+                stroke="currentColor"
+              >
+                <circle cx="11" cy="11" r="8"></circle>
+                <path d="m21 21-4.3-4.3"></path>
+              </g>
+            </svg>
+
+            <input
+              type="search"
+              class="grow"
+              placeholder="Search"
+              name="search"
+              x-model="search"
+              @keydown.enter.prevent="updateSearch"
+            />
+          </label>
+        </div>
+        <label
+          x-data="{
+            role: '',
+            updateQueryParam() {
+              const params = new URLSearchParams(window.location.search);
+              if (this.role) {
+                params.set('role', this.role);
+              } else {
+                params.delete('role');
+              }
+              window.location.search = params.toString();
+            }
+          }"
+          x-init="role = new URLSearchParams(window.location.search).get('role') || 'all'"
+        >
+          <select
+            class="select rounded-none w-full"
+            name="role"
+            @change="updateQueryParam"
+            x-model="role"
+          >
+            <option value="all">All Roles</option>
+            <option value="viewer">Viewer</option>
+            <option value="editor">Editor</option>
+            <option value="maintainer">Maintainer</option>
+          </select>
+        </label>
+        <button
+          class="btn btn-neutral rounded-none w-[140px]"
+          x-on:click.prevent="selectedUserId = null; selectedUser = null; document.getElementById('users_create_or_update_modal').showModal();"
+        >
+          Create
+        </button>
+      </div>
+    </div>
+    <div class="overflow-x-auto">
+      <div>
+        <table class="table">
+          <thead>
+            <tr>
+              <th class="text-black">No.</th>
+              <th class="text-black">Email</th>
+              <th class="text-black">Roles</th>
+              <th class="text-black">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {
+              users.map((user: any, idx: number) => (
+                <tr>
+                  <td>{idx + 1}</td>
+                  <td>{user.email}</td>
+                  <td class="capitalize">{user.role}</td>
+                  <td class="flex items-center gap-4">
+                    <a
+                      href="#"
+                      data-userid={user.id}
+                      x-on:click.prevent="selectedUserId = $el.dataset.userid; document.getElementById('users_delete').showModal();"
+                    >
+                      <Icons.trash />
+                    </a>
+                    <a
+                      href="#"
+                      data-userid={user.id}
+                      data-user={JSON.stringify(user)}
+                      x-on:click.prevent="selectedUserId = $el.dataset.userid; selectedUser = $el.dataset.user; document.getElementById('users_create_or_update_modal').showModal();"
+                    >
+                      <Icons.edit />
+                    </a>
+                  </td>
+                </tr>
+              ))
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <UsersDelete slot="dialog" />
+    <UsersCreateOrUpdateModal slot="dialog" />
+  </section>
+</Dashboard>
+
+<script is:inline>
+  const params = new URLSearchParams(window.location.search);
+  if (!params.has("role")) {
+    params.set("role", "all");
+
+    window.location.search = params.toString();
+  }
+</script>

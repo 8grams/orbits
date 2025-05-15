@@ -10,7 +10,7 @@ if (Astro.request.method === "POST") {
     data.get("username") === import.meta.env.ADMIN_USERNAME &&
     data.get("password") === import.meta.env.ADMIN_PASSWORD
   ) {
-    Astro?.session?.set("username", {
+    Astro?.session?.set("user", {
       username: data.get("username"),
       role: "ADMIN",
       name: "ADMIN",

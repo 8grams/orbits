@@ -1,0 +1,41 @@
+---
+import { openDB } from "../../utils/db";
+
+const db = await openDB();
+
+if (Astro.request.method === "POST") {
+  const formData = await Astro.request.formData();
+  const id = formData.get("id");
+  await db.run(`DELETE FROM users WHERE id = ?`, [id]);
+  return Astro.redirect("/dashboard/users");
+}
+---
+
+<dialog id="users_delete" class="modal">
+  <div class="modal-box w-sm">
+    <form
+      class="flex flex-col gap-6"
+      method="POST"
+      action="/dashboard/users-delete"
+    >
+      <h2 class="card-title justify-center">Delete User</h2>
+      <p>Are you sure you want to delete this eligible user?</p>
+      <input type="hidden" name="id" :value="selectedUserId" />
+      <div class="flex justify-end">
+        <button
+          type="button"
+          class="btn btn-neutral rounded-none"
+          x-on:click="$el.closest('dialog').close()"
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          class="btn btn-error rounded-none ml-2 text-white"
+        >
+          Delete
+        </button>
+      </div>
+    </form>
+  </div>
+</dialog>

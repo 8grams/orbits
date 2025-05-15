@@ -1,0 +1,26 @@
+---
+import Layout from "./Layout.astro";
+const { pageTitle } = Astro.props;
+---
+
+<Layout pageTitle={pageTitle}>
+  <nav class="w-full bg-white shadow-md">
+    <div class="flex justify-between items-center px-6 py-6">
+      <ul
+        class="flex items-center gap-6"
+        x-data="{ current: window.location.pathname }"
+      >
+        <li>
+          <a
+            :class="current === '/dashboard/resources' ? 'underline underline-offset-12 font-bold text-neutral' : 'text-gray-500'"
+            href="/dashboard/users">Users</a
+          >
+        </li>
+      </ul>
+    </div>
+  </nav>
+  <main class="py-6 px-6 max-w-[1440px] mx-auto">
+    <slot name="content" />
+  </main>
+</Layout>
+<slot name="dialog" />

@@ -1,0 +1,77 @@
+---
+import { openDB } from "../../utils/db";
+
+const db = await openDB();
+
+if (Astro.request.method === "POST") {
+  const formData = await Astro.request.formData();
+  const email = formData.get("email");
+  const role = formData.get("role");
+  const userId = formData.get("id");
+  if (userId) {
+    await db.run(`UPDATE users SET email = ?, role = ? WHERE id = ?`, [
+      email,
+      role,
+      userId,
+    ]);
+  } else {
+    await db.run(`INSERT INTO users (email, role) VALUES (?, ?)`, [
+      email,
+      role,
+    ]);
+  }
+  return Astro.redirect("/dashboard/users");
+}
+---
+
+<dialog class="modal" id="users_create_or_update_modal">
+  <div class="modal-box">
+    <form method="dialog">
+      <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2"
+        >✕</button
+      >
+    </form>
+    <form
+      class="flex flex-col gap-6"
+      method="POST"
+      action="/dashboard/users-create-or-update-modal"
+    >
+      <h2
+        class="card-title justify-center"
+        x-text="JSON.parse(selectedUser)?.id ? 'Update' : 'Create' + ' User'"
+      >
+      </h2>
+      <input type="hidden" name="id" :value="JSON.parse(selectedUser)?.id" />
+      <div class="flex flex-col gap-2">
+        <label for="email">Email</label>
+        <input
+          id="email"
+          type="email"
+          name="email"
+          placeholder="Email"
+          class="input input-bordered w-full rounded-none"
+          required
+          :value="JSON.parse(selectedUser)?.email"
+        />
+      </div>
+      <div class="flex flex-col gap-2">
+        <label for="role">Role</label>
+        <select
+          class="select rounded-none w-full"
+          name="role"
+          id="role"
+          required
+          :value="JSON.parse(selectedUser)?.role"
+        >
+          <option value="" disabled selected>Choose Role</option>
+          <option value="viewer">Viewer</option>
+          <option value="editor">Editor</option>
+          <option value="maintainer">Maintainer</option>
+        </select>
+      </div>
+      <button class="btn btn-neutral w-full rounded-none" type="submit"
+        >Save</button
+      >
+    </form>
+  </div>
+</dialog>
