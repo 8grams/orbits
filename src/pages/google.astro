@@ -1,4 +1,8 @@
 ---
+import {openDB} from "../utils/db"
+
+const db = await openDB();
+
 const { access_token } = await (
   await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
@@ -17,6 +21,17 @@ const { email, name, picture } = await (
     headers: { Authorization: `Bearer ${access_token}` },
   })
 ).json();
+
+const user = await db.get("SELECT * FROM users WHERE email = ?", [email]);
+
+if (!user) {
+  return Astro.redirect("/login?unauthorized=1");
+}
+
+await db.run(
+  `UPDATE users SET name = ?, avatar = ? WHERE email = ?`,
+  [name, picture, email]
+)
 
 Astro?.session?.set("user", {
   email: email,
