@@ -35,7 +35,7 @@ await db.run(
 
 Astro?.session?.set("user", {
   email: email,
-  role: "USER",
+  role: user?.role,
   name: name,
   avatar: picture,
 });

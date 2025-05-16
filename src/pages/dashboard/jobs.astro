@@ -1,0 +1,121 @@
+---
+import Dashboard from "../../layouts/Dashboard.astro"
+import { openDB } from "../../utils/db"
+
+const db = await openDB()
+
+const search = Astro.url.searchParams.get("search") || ""
+const type = Astro.url.searchParams.get("type") || "all"
+
+const jobs = await db.all(
+  `SELECT * FROM jobs WHERE name LIKE ? AND type LIKE ?`,
+  [`%${search}%`, type === "all" ? "%" : type],
+)
+---
+<Dashboard pageTitle="Jobs">
+  <section slot="content" class="card bg-white w-full rounded-none py-12 px-12 shadow-sm flex flex-col gap-8" x-data="{selectedJobId: null, selectedJob: null}">
+    <div class="flex justify-between items-center gap-4 flex-wrap">
+      <h2 class="text-xl font-semibold">Jobs</h2>
+      <div class="flex items-center gap-4">
+        <div
+          x-data="{
+          search: new URLSearchParams(window.location.search).get('search') || '',
+          updateSearch() {
+            const params = new URLSearchParams(window.location.search);
+            if (this.search) {
+              params.set('search', this.search);
+            } else {
+              params.delete('search');
+            }
+            window.location.search = params.toString();
+          }
+  }"
+        >
+          <label class="input rounded-none w-[220px]">
+            <svg
+              class="h-[1em] opacity-50"
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+            >
+              <g
+                stroke-linejoin="round"
+                stroke-linecap="round"
+                stroke-width="2.5"
+                fill="none"
+                stroke="currentColor"
+              >
+                <circle cx="11" cy="11" r="8"></circle>
+                <path d="m21 21-4.3-4.3"></path>
+              </g>
+            </svg>
+
+            <input
+              type="search"
+              class="grow"
+              placeholder="Search"
+              name="search"
+              x-model="search"
+              @keydown.enter.prevent="updateSearch"
+            />
+          </label>
+        </div>
+        <label
+          x-data="{
+            status: '',
+            updateQueryParam() {
+              const params = new URLSearchParams(window.location.search);
+              if (this.status) {
+                params.set('status', this.status);
+              } else {
+                params.delete('status');
+              }
+              window.location.search = params.toString();
+            }
+          }"
+          x-init="status = new URLSearchParams(window.location.search).get('status') || 'all'"
+        >
+          <select
+            class="select rounded-none w-full"
+            name="status"
+            @change="updateQueryParam"
+            x-model="status"
+          >
+            <option value="all">All Status</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+          </select>
+        </label>
+        <button
+          class="btn btn-neutral rounded-none w-[140px]"
+          x-on:click.prevent="selectedUserId = null; selectedUser = null; document.getElementById('jobs_create_or_update_modal').showModal();"
+        >
+          Create
+        </button>
+      </div>
+    </div>
+    <div class="overflow-x-auto">
+      <div>
+        <table class="table">
+          <thead>
+            <tr>
+              <th class="text-black">No.</th>
+              <th class="text-black">Project</th>
+              <th class="text-black">Type</th>
+              <th class="text-black">Status</th>
+              <th class="text-black">Action</th>
+            </tr>
+          </thead>
+        </table>
+      </div>
+    </div>
+  </section>
+</Dashboard>
+<script is:inline>
+  const params = new URLSearchParams(window.location.search);
+  if (!params.has("type")) {
+    params.set("type", "all");
+
+    window.location.search = params.toString();
+  }
+</script>
+
