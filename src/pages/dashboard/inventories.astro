@@ -1,0 +1,126 @@
+---
+import Dashboard from "../../layouts/Dashboard.astro";
+import InventoriesCreateOrUpdateModal from "./inventories-create-or-update-modal.astro";
+import { openDB } from "../../utils/db"
+import { Icons } from "../../utils/icons";
+import InventoriesDelete from "./inventories-delete.astro";
+
+const db = await openDB();
+
+const search = Astro.url.searchParams.get("search") || ""
+const inventories = await db.all(`
+  SELECT
+    inventories.*,
+    COUNT(inventory_hosts.id) AS hosts_count
+  FROM inventories
+         LEFT JOIN inventory_hosts ON inventory_hosts.inventory_id = inventories.id
+  WHERE inventories.name LIKE ?
+  GROUP BY inventories.id
+`, [`%${search}%`]);
+
+const hosts = await db.all(`
+  SELECT * FROM inventory_hosts
+  WHERE inventory_id IN (${inventories.map(() => '?').join(',')})
+`, inventories.map((inv: any) => inv.id));
+
+
+const inventoriesWithHosts = inventories.map((inv: any) => {
+  return {
+    ...inv,
+    hosts: hosts.filter((h: any) => h.inventory_id === inv.id),
+  };
+});
+
+---
+<Dashboard pageTitle="Inventories">
+  <section slot="content" class="card bg-white w-full rounded-none py-12 px-12 shadow-sm flex flex-col gap-8" x-data="{ selectedInventoryId: null, selectedInventory: null }">
+    <div class="flex justify-between items-center gap-4 flex-wrap">
+      <h2 class="text-xl font-semibold">Inventories</h2>
+      <div class="flex items-center gap-4">
+        <div
+          x-data="{
+          search: new URLSearchParams(window.location.search).get('search') || '',
+          updateSearch() {
+            const params = new URLSearchParams(window.location.search);
+            if (this.search) {
+              params.set('search', this.search);
+            } else {
+              params.delete('search');
+            }
+            window.location.search = params.toString();
+          }
+  }"
+        >
+          <label class="input rounded-none w-[220px]">
+            <svg
+              class="h-[1em] opacity-50"
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+            >
+              <g
+                stroke-linejoin="round"
+                stroke-linecap="round"
+                stroke-width="2.5"
+                fill="none"
+                stroke="currentColor"
+              >
+                <circle cx="11" cy="11" r="8"></circle>
+                <path d="m21 21-4.3-4.3"></path>
+              </g>
+            </svg>
+
+            <input
+              type="search"
+              class="grow"
+              placeholder="Search"
+              name="search"
+              x-model="search"
+              @keydown.enter.prevent="updateSearch"
+            />
+          </label>
+        </div>
+        <button
+          class="btn btn-neutral rounded-none w-[140px]"
+          x-on:click.prevent="selectedInventoryId = null; selectedInventory = null; document.getElementById('inventories_create_or_update_modal').showModal();"
+        >
+          Create
+        </button>
+      </div>
+    </div>
+    <div class="overflow-x-auto">
+      <div>
+        <table class="table">
+          <thead>
+            <tr>
+              <th class="text-black">No.</th>
+              <th class="text-black">Name</th>
+              <th class="text-black">Hosts</th>
+              <th class="text-black">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+          {
+            inventoriesWithHosts.map((inventory: any, index: number) => (
+              <tr>
+                <td>{index + 1}</td>
+                <td>{inventory.name}</td>
+                <td>{inventory.hosts_count}</td>
+                <td class="flex items-center gap-4">
+                  <a href="#" data-inventoryId={inventory.id} x-on:click.prevent="selectedInventoryId = $el.dataset.inventoryid; document.getElementById('inventories_delete').showModal();">
+                    <Icons.trash/>
+                  </a>
+                  <a href="#" data-inventoryId={inventory.id} data-inventory={JSON.stringify(inventory)} x-on:click.prevent="selectedInventoryId = $el.dataset.inventoryid; selectedInventory = $el.dataset.inventory; document.getElementById('inventories_create_or_update_modal').showModal();">
+                    <Icons.edit/>
+                  </a>
+                </td>
+              </tr>
+            ))
+          }
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <InventoriesCreateOrUpdateModal slot="dialog" />
+    <InventoriesDelete slot="dialog" />
+  </section>
+</Dashboard>

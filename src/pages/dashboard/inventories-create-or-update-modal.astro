@@ -1,0 +1,197 @@
+---
+import { Icons } from "../../utils/icons";
+import { openDB } from "../../utils/db"
+
+const { user } = Astro.locals
+const db = await openDB();
+const { id: userId } = await db.get(`SELECT id FROM users WHERE email = ?`, [user?.email])
+
+if (Astro.request.method === "POST") {
+  const formData = await Astro.request.formData();
+  const id = formData.get("id");
+  const name = formData.get("name");
+  const hostIpAddress = formData.getAll("ip_address[]");
+  const hostDescription = formData.getAll("description[]");
+  const hosts = hostIpAddress.map((iq, index) => ({
+    ip_address: iq,
+    description: hostDescription[index],
+  }))
+  const usePassword = formData.get("use_password") ? 1 : 0;
+  const username = formData.get("username");
+  const password = formData.get("password");
+  const privateKey = formData.get("private_key");
+
+  if (id) {
+    await db.run(`
+      UPDATE inventories SET name = ?, use_password = ?, username = ?, password = ?, private_key = ? WHERE id = ?`, [
+      name,
+      usePassword,
+      username,
+      password,
+      privateKey,
+      id
+    ])
+    await db.run(`DELETE FROM inventory_hosts WHERE inventory_id = ?`, [id])
+    for (const [ip, desc] of hosts.map((host) => [host.ip_address, host.description])) {
+      await db.run(`INSERT INTO inventory_hosts (inventory_id, ip_address, description) VALUES (?, ?, ?)`, [
+        id,
+        ip,
+        desc
+      ])
+    }
+  } else {
+    const result = await db.run(`
+    INSERT INTO inventories (user_id, name, use_password, username, password, private_key) VALUES (?, ?, ?, ?, ?, ?)`, [
+      userId,
+      name,
+      usePassword,
+      username,
+      password,
+      privateKey
+    ])
+    const inventoryId = result.lastID;
+    for (const [ip, desc] of hosts.map((host) => [host.ip_address, host.description])) {
+      await db.run(`INSERT INTO inventory_hosts (inventory_id, ip_address, description) VALUES (?, ?, ?)`, [
+        inventoryId,
+        ip,
+        desc
+      ])
+    }
+  }
+  return Astro.redirect("/dashboard/inventories");
+}
+
+
+---
+
+<dialog class="modal" id="inventories_create_or_update_modal">
+  <div class="modal-box">
+    <form method="dialog">
+      <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2"
+      >✕</button
+      >
+    </form>
+    <form class="flex flex-col gap-6" x-data="{
+      hosts: [{ip_address: '', description: ''}],
+      addHost() {
+        this.hosts.push({ ip_address: '', description: '' });
+      },
+      removeHost(index) {
+        this.hosts.splice(index, 1);
+      },
+      usePassword: false,
+      toggleUsePassword() {
+        this.usePassword = !this.usePassword;
+      },
+      syncInventory() {
+        const inv = JSON.parse(selectedInventory)
+        this.usePassword = inv.use_password === 1;
+        this.hosts = inv.hosts.map((host) => ({
+          ip_address: host.ip_address,
+          description: host.description
+        }))
+      }
+    }" x-effect="syncInventory()"
+          method="POST" action="/dashboard/inventories-create-or-update-modal">
+      <h2 class="card-title justify-center"
+          x-text="(JSON.parse(selectedInventory)?.id ? 'Update' : 'Create') + ' Inventory'">
+      </h2>
+      <input type="hidden" name="id" :value="JSON.parse(selectedInventory)?.id" />
+      <div class="flex flex-col gap-2">
+        <label for="name">Name</label>
+        <input
+          id="name"
+          type="text"
+          name="name"
+          placeholder="Inventory Name"
+          class="input input-bordered w-full rounded-none"
+          required
+          :value="JSON.parse(selectedInventory)?.name"
+        />
+      </div>
+      <div class="flex flex-col gap-4">
+        <div class="flex items-center gap-2">
+          <label for="hosts" class="flex items-center">Hosts</label>
+          <Icons.add class="w-5 h-5 cursor-pointer" @click="addHost()"/>
+        </div>
+        <template x-for="(host, index) in hosts" :key="index">
+          <div class="flex flex-row gap-2 items-end">
+            <div class="flex flex-col gap-2">
+              <label :for="'ip_address_' + index">IP Address</label>
+              <input
+                :id="'ip_address_' + index"
+                type="text"
+                name="ip_address[]"
+                placeholder="IP Address"
+                class="input input-bordered w-full rounded-none"
+                x-model="host.ip_address"
+                required
+              />
+            </div>
+            <div class="flex flex-col gap-2">
+              <label :for="'description_' + index">Description</label>
+              <input
+                :id="'description_' + index"
+                type="text"
+                name="description[]"
+                placeholder="Description"
+                class="input input-bordered w-full rounded-none"
+                x-model="host.description"
+                required
+              />
+            </div>
+            <Icons.trash class="w-6 h-6 cursor-pointer" @click="removeHost(index)" />
+          </div>
+        </template>
+      </div>
+      <div class="flex flex-col gap-2">
+        <label>SSH Configuration</label>
+        <div class="flex flex-row items-center gap-2">
+          <input id="use-password" :checked="usePassword" @change="toggleUsePassword()" name="use_password" type="checkbox" class="checkbox checkbox-neutral checkbox-sm" />
+          <label for="use-password">Use Password</label>
+        </div>
+        <div class="flex flex-col gap-2">
+          <label for="username">Username</label>
+          <input
+            id="username"
+            type="text"
+            name="username"
+            placeholder="SSH Username"
+            class="input input-bordered w-full rounded-none"
+            required
+            :value="JSON.parse(selectedInventory)?.username"
+          />
+        </div>
+        <template x-if="usePassword">
+          <div class="flex flex-col gap-2">
+            <label for="password">Password</label>
+            <input
+              id="password"
+              type="password"
+              name="password"
+              placeholder="SSH Password"
+              class="input input-bordered w-full rounded-none"
+              required
+              :value="JSON.parse(selectedInventory)?.password"
+            />
+          </div>
+        </template>
+        <template x-if="!usePassword">
+          <div class="flex flex-col gap-2">
+            <label for="private_key">Private Key</label>
+            <textarea
+              id="private_key"
+              name="private_key"
+              placeholder="SSH Private Key"
+              class="textarea textarea-bordered w-full rounded-none"
+              required
+              :value="JSON.parse(selectedInventory)?.private_key"
+            ></textarea>
+          </div>
+        </template>
+      </div>
+      <button class="btn btn-neutral w-full rounded-none" type="submit"
+      >Save</button>
+    </form>
+  </div>
+</dialog>

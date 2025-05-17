@@ -15,6 +15,7 @@ if (Astro.request.method === "POST") {
       role: "ADMIN",
       name: "ADMIN",
       avatar: null,
+      email: import.meta.env.ADMIN_USERNAME
     });
     return Astro.redirect("/dashboard");
   } else {

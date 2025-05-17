@@ -3,6 +3,7 @@ import { open } from "sqlite";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import { env } from "./env.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const dbPath = path.join(__dirname, "../../data/orbits.sqlite");
@@ -57,6 +58,19 @@ async function runMigrations() {
       } else {
         console.log(`⏭️ Skipping already executed migration: ${file}`);
       }
+    }
+
+    const existingUsers = await db.all("SELECT * FROM users");
+    if (existingUsers.length === 0) {
+      console.log("🌱 Seeding admin...");
+      await db.run(
+        `
+        INSERT INTO users (name, email, role) VALUES (?, ?, ?)`,
+        [env.ADMIN_USERNAME, env.ADMIN_PASSWORD, "ADMIN"],
+      );
+      console.log("✅ Admin seeded");
+    } else {
+      console.log("⏭️ Skipping seeding admin, already exists");
     }
 
     console.log("✨ All migrations completed successfully!");
