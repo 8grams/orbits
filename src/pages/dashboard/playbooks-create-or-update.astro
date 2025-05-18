@@ -1,0 +1,185 @@
+---
+import { openDB } from "../../utils/db";
+
+const { user } = Astro.locals;
+const db = await openDB();
+const { id: userId } = await db.get(`SELECT id FROM users WHERE email = ?`, [
+  user?.email,
+]);
+
+if (Astro.request.method === "POST") {
+  const formData = await Astro.request.formData();
+  const name = formData.get("name");
+  const type = formData.get("type");
+  const gitUrl = formData.get("git_url");
+  const privateKey = formData.get("private_key");
+  const mainFile = formData.get("main_file");
+  const yaml = formData.get("yaml");
+  const id = formData.get("id");
+
+  if (id) {
+    await db.run(`
+      UPDATE playbooks SET name = ?, type = ?, git_url = ?, private_key = ?, main_file = ?, playbook = ? WHERE id = ?`,
+      [name, type, gitUrl, privateKey, mainFile, yaml, id]
+    );
+  } else {
+    await db.run(`
+    INSERT INTO playbooks (user_id, name, type, git_url, private_key, main_file, playbook)
+    VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [userId, name, type, gitUrl, privateKey, mainFile, yaml]
+    );
+  }
+  return Astro.redirect("/dashboard/playbooks");
+}
+---
+
+<dialog class="modal" id="playbooks_create_or_update">
+  <div class="modal-box">
+    <form method="dialog">
+      <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2"
+        >✕</button
+      >
+    </form>
+    <form
+      class="flex flex-col gap-6"
+      method="POST"
+      action="/dashboard/playbooks-create-or-update"
+      x-data="PlaybooksForm()"
+      x-effect="
+      const parsed = JSON.parse(selectedPlaybook);
+      typeSelected = parsed?.type;
+      yaml = parsed?.playbook;
+      jsonOutput = parsed?.playbook;
+    "
+    >
+      <h2 class="card-title justify-center" x-text="'New Playbook'"></h2>
+      <input type="hidden" name="id" :value="JSON.parse(selectedPlaybook)?.id" />
+      <div class="flex flex-col gap-2">
+        <label for="name">Name</label>
+        <input
+          id="name"
+          type="text"
+          name="name"
+          placeholder="Name"
+          class="input input-bordered w-full rounded-none"
+          required
+          :value="JSON.parse(selectedPlaybook)?.name"
+        />
+      </div>
+      <div class="flex flex-col gap-2">
+        <label for="type">Type</label>
+        <select
+          class="select rounded-none w-full"
+          name="type"
+          id="type"
+          required
+          @change="typeSelected = $event.target.value"
+          :value="JSON.parse(selectedPlaybook)?.type"
+        >
+          <option value="" disabled selected>Choose Type</option>
+          <option value="static">Static</option>
+          <option value="git">Git</option>
+        </select>
+      </div>
+      <template x-if="typeSelected === 'static'">
+        <div class="flex flex-col gap-6">
+          <div class="flex flex-col gap-2">
+            <label for="yaml">YAML</label>
+            <textarea
+              id="yaml"
+              name="yaml"
+              placeholder="YAML"
+              class="textarea textarea-bordered w-full rounded-none"
+              required
+              x-model="yaml"
+              @input="parseYaml"
+              @keydown.tab.prevent="insertTab($event)"></textarea>
+          </div>
+          <div x-show="error" class="text-red-600 mt-1" x-text="error"></div>
+          <pre
+            class="bg-gray-100 p-3 mt-2 rounded overflow-auto text-sm whitespace-pre max-h-64"
+            x-text="jsonOutput">
+          </pre>
+        </div>
+      </template>
+      <template x-if="typeSelected === 'git'">
+        <div class="flex flex-col gap-6">
+          <div class="flex flex-col gap-2">
+            <label for="git_url">Git URL</label>
+            <input
+              id="git_url"
+              type="text"
+              name="git_url"
+              placeholder="Git URL"
+              class="input input-bordered w-full rounded-none"
+              required
+              :value="JSON.parse(selectedPlaybook)?.git_url"
+            />
+          </div>
+          <div class="flex flex-col gap-2">
+            <label for="private_key">Private Key</label>
+            <textarea
+              id="private_key"
+              name="private_key"
+              placeholder="Private Key"
+              class="textarea textarea-bordered w-full rounded-none"
+              required
+              :value="JSON.parse(selectedPlaybook)?.private_key"
+            ></textarea>
+          </div>
+        </div>
+      </template>
+      <div class="flex flex-col gap-2">
+        <label for="main_file">Main File</label>
+        <input
+          id="main_file"
+          type="text"
+          name="main_file"
+          placeholder="Main File"
+          class="input input-bordered w-full rounded-none"
+          required
+          :value="JSON.parse(selectedPlaybook)?.main_file"
+        />
+      </div>
+      <button class="btn btn-neutral w-full rounded-none" type="submit"
+        >Save</button
+      >
+    </form>
+  </div>
+</dialog>
+<script
+  name="script"
+  src="https://cdn.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js"></script>
+<script is:inline>
+  function PlaybooksForm(){
+    return {
+      typeSelected: "",
+      yaml: "",
+      jsonOutput: "",
+      error: "",
+      parseYaml() {
+        try {
+          const obj = jsyaml.load(this.yaml);
+          this.jsonOutput = JSON.stringify(obj, null, 2);
+          this.error = "";
+        } catch (e) {
+          this.jsonOutput = "";
+          this.error = "⚠️ " + e.message;
+        }
+      },
+      insertTab(e) {
+        const textarea = e.target;
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+
+        const tab = "  ";
+
+        this.yaml =
+          this.yaml.substring(0, start) + tab + this.yaml.substring(end);
+        this.$nextTick(() => {
+          textarea.selectionStart = textarea.selectionEnd = start + tab.length;
+        });
+      }
+    };
+  }
+</script>

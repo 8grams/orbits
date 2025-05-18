@@ -27,6 +27,12 @@ const { user } = Astro.locals
         </li>
         <li>
           <a
+            :class="current === '/dashboard/playbooks' ? 'underline underline-offset-12 font-bold text-neutral' : 'text-gray-500'"
+            href="/dashboard/playbooks">Playbooks</a
+          >
+        </li>
+        <li>
+          <a
             :class="current === '/dashboard/users' ? 'underline underline-offset-12 font-bold text-neutral' : 'text-gray-500'"
             href="/dashboard/users">Users</a
           >
