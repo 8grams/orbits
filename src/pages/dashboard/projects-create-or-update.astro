@@ -1,0 +1,430 @@
+---
+import { openDB } from "../../utils/db";
+import { Icons } from "../../utils/icons";
+
+const { user } = Astro.locals;
+const db = await openDB();
+const { id: userId } = await db.get(`SELECT id FROM users WHERE email = ?`, [
+  user?.email,
+]);
+
+const playbooks = await db.all(
+  `SELECT id, name FROM playbooks WHERE user_id = ?`,
+  [userId],
+);
+const inventories = await db.all(
+  `SELECT id, name FROM inventories WHERE user_id = ?`,
+  [userId],
+);
+const hosts = await db.all(
+  `
+  SELECT * FROM inventory_hosts
+  WHERE inventory_id IN (${inventories.map(() => "?").join(",")})
+`,
+  inventories.map((inv: any) => inv.id),
+);
+const inventoriesWithHosts = inventories.map((inv: any) => {
+  return {
+    ...inv,
+    hosts: hosts.filter((h: any) => h.inventory_id === inv.id),
+  };
+});
+
+if (Astro.request.method === "POST") {
+  const formData = await Astro.request.formData();
+  const id = formData.get("id");
+  const name = formData.get("name");
+  const playbookId = formData.get("playbooks");
+  const inventoryId = formData.get("inventories");
+  const additionalHosts = formData.getAll("ip_address[]").map((ip, index) => ({
+    ip_address: ip,
+    description: formData.getAll("description[]")[index],
+  }));
+  const variables = formData.getAll("variable_key[]").map((key, index) => ({
+    key,
+    value: formData.getAll("variable_value[]")[index],
+  }));
+  const secrets = formData.getAll("secret_key[]").map((key, index) => ({
+    key,
+    value: formData.getAll("secret_value[]")[index],
+  }));
+  const parameters = formData.getAll("parameter_key[]").map((key, index) => ({
+    key,
+    value: formData.getAll("parameter_value[]")[index],
+  }));
+  const inventoryHosts = formData.getAll("inventory_hosts");
+
+  const metaData = [
+    ...additionalHosts.map(({ ip_address, description }) => ({
+      type: "host",
+      key: null,
+      value: null,
+      ip_address,
+      description,
+    })),
+    ...variables.map(({ key, value }) => ({
+      type: "variable",
+      key,
+      value,
+      ip_address: null,
+      description: null,
+    })),
+    ...secrets.map(({ key, value }) => ({
+      type: "secret",
+      key,
+      value,
+      ip_address: null,
+      description: null,
+    })),
+    ...parameters.map(({ key, value }) => ({
+      type: "parameter",
+      key,
+      value,
+      ip_address: null,
+      description: null,
+    })),
+    ...inventoryHosts.map((hostId) => ({
+      type: "inventory_host",
+      key: "inventories_id",
+      value: hostId,
+      ip_address: null,
+      description: null,
+    })),
+  ];
+
+  if (id) {
+    await db.run(
+      `UPDATE projects SET name = ?, playbook_id = ?, inventories_id = ? WHERE id = ?`,
+      [name, playbookId, inventoryId, id],
+    );
+    await db.run(`DELETE FROM project_metadata WHERE project_id = ?`, [id]);
+    for (const { type, key, value, ip_address, description } of metaData) {
+      await db.run(
+        `INSERT INTO project_metadata (project_id, type, key, value, ip_address, description) VALUES (?, ?, ?, ?, ?, ?)`,
+        [id, type, key, value, ip_address, description],
+      );
+    }
+  } else {
+    const project = await db.run(
+      `INSERT INTO projects (user_id, name, playbook_id, inventories_id) VALUES (?, ?, ?, ?)`,
+      [userId, name, playbookId, inventoryId],
+    );
+
+    const projectId = project.lastID;
+
+    for (const { type, key, value, ip_address, description } of metaData) {
+      await db.run(
+        `INSERT INTO project_metadata (project_id, type, key, value, ip_address, description) VALUES (?, ?, ?, ?, ?, ?)`,
+        [projectId, type, key, value, ip_address, description],
+      );
+    }
+  }
+
+
+
+  return Astro.redirect("/dashboard/projects");
+}
+---
+
+<dialog class="modal" id="projects_create_or_update">
+  <div class="modal-box max-h-[90vh] overflow-y-auto">
+    <form method="dialog">
+      <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2"
+        >✕</button
+      >
+    </form>
+    <form
+      class="flex flex-col gap-6"
+      method="POST"
+      x-data="{
+        inventory: null,
+        selectedHosts: [],
+        additional_hosts: [{ip_address: '', description: ''}],
+        variables: [{key: '',value: ''}],
+        secrets: [{key: '',value: ''}],
+        parameters: [{key: '',value: ''}],
+        addHost() {
+          this.additional_hosts.push({ ip_address: '', description: '' });
+        },
+        removeHost(index) {
+          this.additional_hosts.splice(index, 1);
+        },
+        addVariables() {
+          this.variables.push({ key: '', value: '' });
+        },
+        removeVariables(index) {
+          this.variables.splice(index, 1);
+        },
+        addSecrets() {
+          this.secrets.push({ key: '', value: '' });
+        },
+        removeSecrets(index) {
+          this.secrets.splice(index, 1);
+        },
+        addParameters() {
+          this.parameters.push({ key: '', value: '' });
+        },
+        removeParameters(index) {
+          this.parameters.splice(index, 1);
+        },
+        syncProject() {
+          const _project = JSON.parse(selectedProject);
+          this.inventory = _project.inventory_id;
+          this.additional_hosts = _project.children.filter(item => item.type === 'host').map(item => ({
+            ip_address: item.ip_address,
+            description: item.description
+          }));
+          this.variables = _project.children.filter(item => item.type === 'variable').map(item => ({
+            key: item.key,
+            value: item.value
+          }));
+          this.secrets = _project.children.filter(item => item.type === 'secret').map(item => ({
+            key: item.key,
+            value: item.value
+          }));
+          this.parameters = _project.children.filter(item => item.type === 'parameter').map(item => ({
+            key: item.key,
+            value: item.value
+          }));
+          this.selectedHosts = _project.children.filter(item => item.type === 'inventory_host').map(item => item.value);
+        }
+      }" x-effect="syncProject()"
+      action="projects-create-or-update"
+    >
+      <input type="hidden" name="id" :value="JSON.parse(selectedProject)?.project_id" />
+      <h2
+        class="card-title"
+        x-text="JSON.parse(selectedProject)?.project_id ? 'Update Project' : 'Create Project'"
+      ></h2>
+      <div class="flex flex-col gap-2">
+        <label for="name">Name</label>
+        <input
+          id="name"
+          type="text"
+          name="name"
+          placeholder="Name"
+          class="input input-bordered w-full rounded-none"
+          required
+          :value="JSON.parse(selectedProject)?.project_name"
+        />
+      </div>
+      <div class="flex flex-col gap-2">
+        <label for="playbooks">Playbooks</label>
+        <select
+          class="select rounded-none w-full"
+          name="playbooks"
+          id="playbooks"
+          required
+          :value="JSON.parse(selectedProject)?.playbook_id"
+        >
+          <option value="" disabled selected>Choose Playbook</option>
+          {
+            playbooks.map((playbook: any) => (
+              <option value={playbook.id}>{playbook.name}</option>
+            ))
+          }
+        </select>
+      </div>
+      <div class="flex flex-col gap-2">
+        <label for="inventories">Inventory</label>
+        <select
+          class="select rounded-none w-full"
+          name="inventories"
+          id="inventories"
+          required
+          @change="inventory = $event.target.value"
+          :value="JSON.parse(selectedProject)?.inventory_id"
+        >
+          <option value="" disabled selected>Choose Inventories</option>
+          {
+            inventories.map((inventory: any) => (
+              <option value={inventory.id}>{inventory.name}</option>
+            ))
+          }
+        </select>
+      </div>
+      <template x-if="inventory">
+        <div class="flex flex-col gap-6">
+          <div class="flex flex-row justify-between">
+            <label>IP Address</label>
+            <label>Description</label>
+          </div>
+          {
+            inventoriesWithHosts
+              .flatMap((inventory: any) => inventory.hosts)
+              .map((host: any) => (
+                <div class="flex justify-between items-center">
+                  <p>{host.ip_address}</p>
+                  <div class="flex items-center gap-4">
+                    <p>{host.description}</p>
+                    <input
+                      name="inventory_hosts"
+                      type="checkbox"
+                      value={host.id}
+                      x-model="selectedHosts"
+                      class="toggle toggle-md"
+                    />
+                  </div>
+                </div>
+              ))
+          }
+        </div>
+      </template>
+      <div class="flex flex-col gap-4">
+        <div class="flex items-center gap-2">
+          <label for="hosts" class="flex items-center">Additional Hosts</label>
+          <Icons.add class="w-5 h-5 cursor-pointer" @click="addHost()" />
+        </div>
+        <template x-for="(host, index) in additional_hosts" :key="index">
+          <div class="flex flex-row gap-2 items-end">
+            <div class="flex flex-col gap-2">
+              <label :for="'ip_address_' + index">IP Address</label>
+              <input
+                :id="'ip_address_' + index"
+                type="text"
+                name="ip_address[]"
+                placeholder="IP Address"
+                class="input input-bordered w-full rounded-none"
+                x-model="host.ip_address"
+                required
+              />
+            </div>
+            <div class="flex flex-col gap-2">
+              <label :for="'description_' + index">Description</label>
+              <input
+                :id="'description_' + index"
+                type="text"
+                name="description[]"
+                placeholder="Description"
+                class="input input-bordered w-full rounded-none"
+                x-model="host.description"
+                required
+              />
+            </div>
+            <Icons.trash
+              class="w-6 h-6 cursor-pointer"
+              @click="removeHost(index)"
+            />
+          </div>
+        </template>
+      </div>
+      <div class="flex flex-col gap-4">
+        <div class="flex items-center gap-2">
+          <label for="hosts" class="flex items-center">Variables</label>
+          <Icons.add class="w-5 h-5 cursor-pointer" @click="addVariables()" />
+        </div>
+        <template x-for="(variable, index) in variables" :key="index">
+          <div class="flex flex-row gap-2 items-end">
+            <div class="flex flex-col gap-2">
+              <label :for="'key_' + index">Key</label>
+              <input
+                :id="'key_' + index"
+                type="text"
+                name="variable_key[]"
+                placeholder="Key"
+                class="input input-bordered w-full rounded-none"
+                x-model="variable.key"
+                required
+              />
+            </div>
+            <div class="flex flex-col gap-2">
+              <label :for="'value_' + index">Value</label>
+              <input
+                :id="'value_' + index"
+                type="text"
+                name="variable_value[]"
+                placeholder="Value"
+                class="input input-bordered w-full rounded-none"
+                x-model="variable.value"
+                required
+              />
+            </div>
+            <Icons.trash
+              class="w-6 h-6 cursor-pointer"
+              @click="removeVariables(index)"
+            />
+          </div>
+        </template>
+      </div>
+      <div class="flex flex-col gap-4">
+        <div class="flex items-center gap-2">
+          <label for="hosts" class="flex items-center">Secrets</label>
+          <Icons.add class="w-5 h-5 cursor-pointer" @click="addSecrets()" />
+        </div>
+        <template x-for="(secret, index) in secrets" :key="index">
+          <div class="flex flex-row gap-2 items-end">
+            <div class="flex flex-col gap-2">
+              <label :for="'key_' + index">Key</label>
+              <input
+                :id="'key_' + index"
+                type="text"
+                name="secret_key[]"
+                placeholder="Key"
+                class="input input-bordered w-full rounded-none"
+                x-model="secret.key"
+                required
+              />
+            </div>
+            <div class="flex flex-col gap-2">
+              <label :for="'value_' + index">Value</label>
+              <input
+                :id="'value_' + index"
+                type="text"
+                name="secret_value[]"
+                placeholder="Value"
+                class="input input-bordered w-full rounded-none"
+                x-model="secret.value"
+                required
+              />
+            </div>
+            <Icons.trash
+              class="w-6 h-6 cursor-pointer"
+              @click="removeSecrets(index)"
+            />
+          </div>
+        </template>
+      </div>
+      <div class="flex flex-col gap-4">
+        <div class="flex items-center gap-2">
+          <label for="hosts" class="flex items-center">Parameters</label>
+          <Icons.add class="w-5 h-5 cursor-pointer" @click="addParameters()" />
+        </div>
+        <template x-for="(pars, index) in parameters" :key="index">
+          <div class="flex flex-row gap-2 items-end">
+            <div class="flex flex-col gap-2">
+              <label :for="'key_' + index">Key</label>
+              <input
+                :id="'key_' + index"
+                type="text"
+                name="parameter_key[]"
+                placeholder="Key"
+                class="input input-bordered w-full rounded-none"
+                x-model="pars.key"
+                required
+              />
+            </div>
+            <div class="flex flex-col gap-2">
+              <label :for="'value_' + index">Value</label>
+              <input
+                :id="'value_' + index"
+                type="text"
+                name="parameter_value[]"
+                placeholder="Value"
+                class="input input-bordered w-full rounded-none"
+                x-model="pars.value"
+                required
+              />
+            </div>
+            <Icons.trash
+              class="w-6 h-6 cursor-pointer"
+              @click="removeParameters(index)"
+            />
+          </div>
+        </template>
+      </div>
+      <button class="btn btn-neutral w-full rounded-none" type="submit"
+        >Save</button
+      >
+    </form>
+  </div>
+</dialog>
