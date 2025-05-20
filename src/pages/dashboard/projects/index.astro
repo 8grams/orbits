@@ -1,0 +1,181 @@
+---
+import Dashboard from "../../../layouts/Dashboard.astro";
+import { openDB } from "../../../utils/db";
+import ProjectsCreateOrUpdate from "./projects-create-or-update.astro";
+import { Icons } from "../../../utils/icons";
+import ProjectsDelete from "./projects-delete.astro";
+
+const db = await openDB();
+
+const search = Astro.url.searchParams.get("search") || "";
+
+const rows = await db.all(`
+  SELECT 
+  p.id AS project_id,
+  p.name AS project_name,
+  i.name AS inventory_name,
+  i.id AS inventory_id,
+  pb.name AS playbook_name,
+  pb.id AS playbook_id,
+  pm.id AS metadata_id,
+  pm.type AS metadata_type,
+  pm.key AS metadata_key,
+  pm.value AS metadata_value,
+  pm.ip_address AS metadata_ip,
+  pm.description AS metadata_description
+FROM projects p
+LEFT JOIN inventories i ON p.inventories_id = i.id
+LEFT JOIN playbooks pb ON p.playbook_id = pb.id
+LEFT JOIN project_metadata pm ON p.id = pm.project_id
+  WHERE p.name LIKE ?
+     OR i.name LIKE ?
+     OR pb.name LIKE ?
+
+`, [
+    `%${search}%`,
+    `%${search}%`,
+    `%${search}%`
+]);
+
+const groupedProjects = [];
+
+const projectMap = new Map();
+
+for (const row of rows) {
+    const {
+        project_id,
+        project_name,
+        inventory_name,
+        inventory_id,
+        playbook_name,
+        playbook_id,
+        metadata_id,
+        metadata_type,
+        metadata_key,
+        metadata_value,
+        metadata_ip,
+        metadata_description
+    } = row;
+
+    if (!projectMap.has(project_id)) {
+        const newProject = {
+            project_id,
+            project_name,
+            inventory_name,
+            playbook_name,
+            inventory_id,
+            playbook_id,
+            children: []
+        };
+        projectMap.set(project_id, newProject);
+        groupedProjects.push(newProject);
+    }
+
+    if (metadata_id !== null) {
+        projectMap.get(project_id).children.push({
+            id: metadata_id,
+            type: metadata_type,
+            key: metadata_key,
+            value: metadata_value,
+            ip_address: metadata_ip,
+            description: metadata_description
+        });
+    }
+    
+    console.log(groupedProjects, 'here')
+}
+---
+<Dashboard pageTitle="Projects">
+    <section slot="content" class="card bg-white w-full rounded-none py-12 px-12 shadow-sm flex flex-col gap-8"
+             x-data="{ selectedProjectId: null, selectedProject: null }"
+    >
+        <div class="flex justify-between items-center gap-4 flex-wrap">
+            <h2 class="text-xl font-semibold">Projects</h2>
+            <div class="flex items-center gap-4">
+                <div
+                        x-data="{
+          search: new URLSearchParams(window.location.search).get('search') || '',
+          updateSearch() {
+            const params = new URLSearchParams(window.location.search);
+            if (this.search) {
+              params.set('search', this.search);
+            } else {
+              params.delete('search');
+            }
+            window.location.search = params.toString();
+          }
+  }"
+                >
+                    <label class="input rounded-none w-[220px]">
+                        <svg
+                                class="h-[1em] opacity-50"
+                                xmlns="http://www.w3.org/2000/svg"
+                                viewBox="0 0 24 24"
+                        >
+                            <g
+                                    stroke-linejoin="round"
+                                    stroke-linecap="round"
+                                    stroke-width="2.5"
+                                    fill="none"
+                                    stroke="currentColor"
+                            >
+                                <circle cx="11" cy="11" r="8"></circle>
+                                <path d="m21 21-4.3-4.3"></path>
+                            </g>
+                        </svg>
+
+                        <input
+                                type="search"
+                                class="grow"
+                                placeholder="Search"
+                                name="search"
+                                x-model="search"
+                                @keydown.enter.prevent="updateSearch"
+                        />
+                    </label>
+                </div>
+                <button
+                        class="btn btn-neutral rounded-none w-[140px]"
+                        x-on:click.prevent="selectedProjectId = null; selectedProject = null; document.getElementById('projects_create_or_update').showModal();"
+                >
+                    Create
+                </button>
+            </div>
+        </div>
+        <div class="overflow-x-auto">
+            <div>
+                <table class="table">
+                    <thead>
+                    <tr>
+                        <th class="text-black">No.</th>
+                        <th class="text-black">Name</th>
+                        <th class="text-black">Inventories</th>
+                        <th class="text-black">Playbook</th>
+                        <th class="text-black">Action</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {groupedProjects.map((project: any, idx: number) => (
+                            <tr>
+                                <td>{idx + 1}</td>
+                                <td>{project.project_name}</td>
+                                <td>{project.inventory_name}</td>
+                                <td>{project.playbook_name}</td>
+                                <td class="flex items-center gap-4">
+                                    <a href="#" data-projectId={project.project_id} x-on:click.prevent="selectedProjectId = $el.dataset.projectid; document.getElementById('projects_delete').showModal();">
+                                        <Icons.trash/>
+                                    </a>
+                                    <a href="#" data-projectid={project.project_id} data-project={JSON.stringify(project)} x-on:click.prevent="selectedProjectId = $el.dataset.projectid; selectedProject = $el.dataset.project; document.getElementById('projects_create_or_update').showModal();">
+                                        <Icons.edit/>
+                                    </a>
+                                </td>
+                            </tr>
+                    ))}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <ProjectsDelete/>
+        <ProjectsCreateOrUpdate/>
+    </section>
+</Dashboard>

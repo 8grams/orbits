@@ -69,7 +69,6 @@ if (Astro.request.method === "POST") {
       >✕</button
       >
     </form>
-    <p x-text="selectedJob"></p>
     <form x-data="{ selectedType: '' }" x-effect="selectedType = JSON.parse(selectedJob)?.type" class="flex flex-col gap-6" method="POST" action="/dashboard/jobs-create-or-update-modal">
       <h2 class="card-title justify-center"
         x-text="selectedJobId ? 'Update Job' : 'New Job'"

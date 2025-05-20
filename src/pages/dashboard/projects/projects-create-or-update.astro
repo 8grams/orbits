@@ -1,6 +1,6 @@
 ---
-import { openDB } from "../../utils/db";
-import { Icons } from "../../utils/icons";
+import { openDB } from "../../../utils/db";
+import { Icons } from "../../../utils/icons";
 
 const { user } = Astro.locals;
 const db = await openDB();
@@ -130,7 +130,7 @@ if (Astro.request.method === "POST") {
   <div class="modal-box max-h-[90vh] overflow-y-auto">
     <form method="dialog">
       <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2"
-        >✕</button
+      >✕</button
       >
     </form>
     <form
@@ -189,7 +189,7 @@ if (Astro.request.method === "POST") {
           this.selectedHosts = _project.children.filter(item => item.type === 'inventory_host').map(item => item.value);
         }
       }" x-effect="syncProject()"
-      action="projects-create-or-update"
+      action="/dashboard/projects/projects-create-or-update"
     >
       <input type="hidden" name="id" :value="JSON.parse(selectedProject)?.project_id" />
       <h2
@@ -423,7 +423,7 @@ if (Astro.request.method === "POST") {
         </template>
       </div>
       <button class="btn btn-neutral w-full rounded-none" type="submit"
-        >Save</button
+      >Save</button
       >
     </form>
   </div>

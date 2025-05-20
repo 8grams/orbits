@@ -1,0 +1,174 @@
+---
+import Dashboard from "../../../../layouts/Dashboard.astro"
+import { openDB } from "../../../../utils/db"
+import { Icons } from "../../../../utils/icons"
+
+const db = await openDB()
+
+const { slug } = Astro.params
+
+const getProject = await db.all(`
+  SELECT 
+  p.id AS project_id,
+  p.name AS project_name,
+  i.name AS inventory_name,
+  i.id AS inventory_id,
+  pb.name AS playbook_name,
+  pb.id AS playbook_id,
+  pm.id AS metadata_id,
+  pm.type AS metadata_type,
+  pm.key AS metadata_key,
+  pm.value AS metadata_value,
+  pm.ip_address AS metadata_ip,
+  pm.description AS metadata_description,
+  j.choose_time AS job_choose_time,
+  j.valid_until AS job_valid_until
+FROM projects p
+LEFT JOIN inventories i ON p.inventories_id = i.id
+LEFT JOIN playbooks pb ON p.playbook_id = pb.id
+LEFT JOIN project_metadata pm ON p.id = pm.project_id
+LEFT JOIN jobs j ON p.id = j.project_id
+  WHERE p.name = ?
+`, [slug])
+
+let project: any = null;
+
+for (const row of getProject) {
+  const {
+    project_id,
+    project_name,
+    inventory_name,
+    inventory_id,
+    playbook_name,
+    playbook_id,
+    metadata_id,
+    metadata_type,
+    metadata_key,
+    metadata_value,
+    metadata_ip,
+    metadata_description,
+    job_choose_time,
+    job_valid_until
+  } = row;
+
+  if (!project) {
+    project = {
+      project_id,
+      project_name,
+      inventory_name,
+      inventory_id,
+      playbook_name,
+      playbook_id,
+      job_choose_time,
+      job_valid_until,
+      children: []
+    };
+  }
+
+  if (metadata_id !== null) {
+    project.children.push({
+      id: metadata_id,
+      type: metadata_type,
+      key: metadata_key,
+      value: metadata_value,
+      ip_address: metadata_ip,
+      description: metadata_description
+    });
+  }
+}
+---
+<Dashboard pageTitle={`Project - ${slug}`}>
+  <section slot="content" class="card bg-white w-full rounded-none py-12 px-12 shadow-sm flex flex-col gap-8">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
+      <div class="flex flex-col gap-6">
+        <div class="flex flex-col gap-4">
+          <h2 class="text-black font-bold text-xl">Name</h2>
+          <p>{project.project_name}</p>
+        </div>
+        <div class="flex flex-col gap-4">
+          <h2 class="text-black font-bold text-xl">Playbook</h2>
+          <div class="flex flex-row gap-4">
+            <p>{project.playbook_name}</p>
+            <a class="cursor-pointer" href={`/dashboard/playbooks?search=${project.playbook_name}`} target="_blank" rel="noopener noreferrer">
+              <Icons.newTab/>
+            </a>
+          </div>
+        </div>
+        <div class="flex flex-col gap-4">
+          <h2 class="text-black font-bold text-xl">Inventories</h2>
+          <div class="flex flex-row gap-4 space-x-8">
+            <div class="flex flex-col gap-4">
+              <h2 class="text-black">IP Address</h2>
+              {project.children.filter((item: any) => item.type === 'host').map((v: any) => (
+                <p>{v.ip_address}</p>
+              ))}
+            </div>
+            <div class="flex flex-col gap-4">
+              <h2 class="text-black">Description</h2>
+              {project.children.filter((item: any) => item.type === 'host').map((v: any) => (
+                <p>{v.description}</p>
+              ))}
+            </div>
+          </div>
+        </div>
+        <div class="flex flex-col gap-4">
+          <h2 class="text-black font-bold text-xl">Variables</h2>
+          <div class="flex flex-row gap-4 space-x-8">
+            <div class="flex flex-col gap-4">
+              <h2 class="text-black">Key</h2>
+              {project.children.filter((item: any) => item.type === 'variable').map((v: any) => (
+                <p>{v.key}</p>
+              ))}
+            </div>
+            <div class="flex flex-col gap-4">
+              <h2 class="text-black">Value</h2>
+              {project.children.filter((item: any) => item.type === 'variable').map((v: any) => (
+                <p>{v.value}</p>
+              ))}
+            </div>
+          </div>
+        </div>
+        <div class="flex flex-col gap-4">
+          <h2 class="text-black font-bold text-xl">Secrets</h2>
+          <div class="flex flex-row gap-4 space-x-8">
+            <div class="flex flex-col gap-4">
+              <h2 class="text-black">Key</h2>
+              {project.children.filter((item: any) => item.type === 'secret').map((v: any) => (
+                <p>{v.key}</p>
+              ))}
+            </div>
+            <div class="flex flex-col gap-4">
+              <h2 class="text-black">Value</h2>
+              {project.children.filter((item: any) => item.type === 'secret').map((v: any) => (
+                <p>{v.value}</p>
+              ))}
+            </div>
+          </div>
+        </div>
+        <div class="flex flex-col gap-4">
+          <h2 class="text-black font-bold text-xl">Parameters</h2>
+          <div class="flex flex-row gap-4 space-x-8">
+            <div class="flex flex-col gap-4">
+              <h2 class="text-black">Key</h2>
+              {project.children.filter((item: any) => item.type === 'parameter').map((v: any) => (
+                <p>{v.key}</p>
+              ))}
+            </div>
+            <div class="flex flex-col gap-4">
+              <h2 class="text-black">Value</h2>
+              {project.children.filter((item: any) => item.type === 'parameter').map((v: any) => (
+                <p>{v.value}</p>
+              ))}
+            </div>
+          </div>
+        </div>
+        <div class="flex flex-col gap-4">
+          <h2 class="text-black font-bold text-xl">Scheduled</h2>
+          <p>Next Execution : {project.job_choose_time ?? '-'}</p>
+          <p>Executed at : {project.job_valid_until ?? '-'}</p>
+        </div>
+      </div>
+      <div>editor</div>
+    </div>
+  </section>
+</Dashboard>
