@@ -1,0 +1,242 @@
+---
+import { openDB } from "../../utils/db";
+
+const { user } = Astro.locals;
+const db = await openDB();
+const { id: userId } = await db.get(`SELECT id FROM users WHERE email = ?`, [
+  user?.email,
+]);
+
+const getProjects = await db.all(`
+  SELECT id, name FROM projects WHERE user_id = ?
+`, [userId])
+
+if (Astro.request.method === "POST") {
+  const formData= await Astro.request.formData();
+  const name = formData.get("name");
+  const project = formData.get("project");
+  const type = formData.get("type");
+  const periodically = formData.get("periodically");
+  const cronsyntax = formData.get("cronsyntax");
+  const validuntil = formData.get("validuntil");
+  const id = formData.get("id");
+  const today = new Date();
+  let status = "inactive";
+  if (typeof validuntil === "string") {
+    const validUntilDate = new Date(validuntil);
+    if (!isNaN(validUntilDate.getTime())) {
+      status = today > validUntilDate ? "inactive" : "active";
+    } else {
+      console.warn("Invalid date format for validuntil");
+    }
+  } else {
+    console.warn("validuntil is missing or not a string");
+  }
+  console.log(id)
+  if (id) {
+    await db.run(`UPDATE jobs SET name = ?, project_id = ?, type = ?, cron_syntax = ?, choose_time = ?, valid_until = ?, status = ? WHERE id = ?`, [
+      name,
+      project,
+      type,
+      cronsyntax,
+      periodically,
+      validuntil,
+      status,
+      id
+    ])
+  } else {
+    await db.run(`INSERT INTO jobs (user_id, project_id, name, type, cron_syntax, choose_time, valid_until, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        userId,
+        project,
+        name,
+        type,
+        cronsyntax,
+        periodically,
+        validuntil,
+        status
+      ]
+    )
+  }
+  return Astro.redirect("/dashboard/jobs");
+}
+---
+
+<dialog class="modal" id="jobs_create_or_update_modal">
+  <div class="modal-box max-h-screen overflow-y-auto">
+    <form method="dialog">
+      <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2"
+      >✕</button
+      >
+    </form>
+    <p x-text="selectedJob"></p>
+    <form x-data="{ selectedType: '' }" x-effect="selectedType = JSON.parse(selectedJob)?.type" class="flex flex-col gap-6" method="POST" action="/dashboard/jobs-create-or-update-modal">
+      <h2 class="card-title justify-center"
+        x-text="selectedJobId ? 'Update Job' : 'New Job'"
+      ></h2>
+      <input type="hidden" name="id" :value="JSON.parse(selectedJob)?.id" />
+      <div class="flex flex-col gap-2">
+        <label for="name">Name</label>
+        <input
+          id="name"
+          type="text"
+          name="name"
+          placeholder="Name"
+          class="input input-bordered w-full rounded-none"
+          required
+          :value="JSON.parse(selectedJob)?.name"
+        />
+      </div>
+      <div class="flex flex-col gap-2">
+        <label for="project">Project</label>
+        <select
+          class="select rounded-none w-full"
+          name="project"
+          id="project"
+          required
+          :value="JSON.parse(selectedJob)?.project_id"
+        >
+          <option value="" disabled selected>Choose Project</option>
+          {getProjects.map((project: any) => (
+            <option value={project.id}>{project.name}</option>
+          ))}
+        </select>
+      </div>
+      <div class="flex flex-col gap-2">
+        <label for="type">Type</label>
+        <select
+          class="select rounded-none w-full"
+          name="type"
+          id="type"
+          required
+          @change="selectedType = $event.target.value"
+          :value="JSON.parse(selectedJob)?.type"
+        >
+          <option value="" disabled selected>Choose Type</option>
+          <option value="one_time">One Time</option>
+          <option value="periodically">Periodically</option>
+        </select>
+      </div>
+      <template x-if="selectedType === 'periodically'">
+        <div class="flex flex-col gap-2">
+          <label for="periodically">Periodically</label>
+          <div x-data="{ selectedDate: '', displayText: 'Expired At' }" x-effect="
+        if (selectedJob) {
+          const job = JSON.parse(selectedJob);
+          selectedDate = job.valid_until;
+          displayText = job.valid_until;
+        }">
+            <button
+              type="button"
+              popovertarget="cally-popover-periodically"
+              class="input input-border w-full rounded-none"
+              id="cally-periodically"
+              style="anchor-name:--cally1"
+              x-text="displayText"
+            >
+              Expired At
+            </button>
+            <input type="hidden" name="periodically" id="periodically" x-model="selectedDate" />
+            <div
+              popover
+              id="cally-popover-periodically"
+              class="dropdown bg-base-100 rounded-box shadow-lg"
+              style="position-anchor:--cally1"
+            >
+              <calendar-date
+                class="cally"
+                name="periodically"
+                @change="selectedDate = $event.target.value; displayText = $event.target.value; $nextTick(() => $el.closest('[x-data]').querySelector('[popover]').hidePopover())"
+              >
+                <svg
+                  aria-label="Previous"
+                  class="fill-current size-4"
+                  slot="previous"
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                ><path d="M15.75 19.5 8.25 12l7.5-7.5"></path></svg
+                >
+                <svg
+                  aria-label="Next"
+                  class="fill-current size-4"
+                  slot="next"
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                ><path d="m8.25 4.5 7.5 7.5-7.5 7.5"></path></svg
+                >
+                <calendar-month></calendar-month>
+              </calendar-date>
+            </div>
+          </div>
+        </div>
+      </template>
+      <div class="flex flex-col gap-2">
+        <label for="cronsyntax">Cron Syntax</label>
+        <input
+          id="cronsyntax"
+          type="text"
+          name="cronsyntax"
+          placeholder="Cron Syntax"
+          class="input input-bordered w-full rounded-none"
+          required
+          :value="JSON.parse(selectedJob)?.cron_syntax"
+        />
+      </div>
+      <div class="flex flex-col gap-2">
+        <label for="validuntil">Valid Until</label>
+        <div x-data="{ selectedDate: '', displayText: 'Expired At' }" x-effect="
+        if (selectedJob) {
+          const job = JSON.parse(selectedJob);
+          selectedDate = job.valid_until;
+          displayText = job.valid_until;
+        }">
+          <button
+            type="button"
+            popovertarget="cally-popover-validuntil"
+            class="input input-border w-full rounded-none"
+            id="cally-validuntil"
+            style="anchor-name:--cally1"
+            x-text="displayText"
+          >
+            Expired At
+          </button>
+          <input type="hidden" name="validuntil" id="validuntil" x-model="selectedDate" />
+          <div
+            popover
+            id="cally-popover-validuntil"
+            class="dropdown bg-base-100 rounded-box shadow-lg"
+            style="position-anchor:--cally1"
+          >
+            <calendar-date
+              class="cally"
+              name="validuntil"
+              @change="selectedDate = $event.target.value; displayText = $event.target.value; $nextTick(() => $el.closest('[x-data]').querySelector('[popover]').hidePopover())"
+            >
+              <svg
+                aria-label="Previous"
+                class="fill-current size-4"
+                slot="previous"
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+              ><path d="M15.75 19.5 8.25 12l7.5-7.5"></path></svg
+              >
+              <svg
+                aria-label="Next"
+                class="fill-current size-4"
+                slot="next"
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+              ><path d="m8.25 4.5 7.5 7.5-7.5 7.5"></path></svg
+              >
+              <calendar-month></calendar-month>
+            </calendar-date>
+          </div>
+        </div>
+      </div>
+      <button class="btn btn-neutral w-full rounded-none" type="submit"
+      >Save</button
+      >
+    </form>
+  </div>
+</dialog>
+<script type="module" src="https://unpkg.com/cally"></script>

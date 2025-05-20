@@ -1,16 +1,25 @@
 ---
 import Dashboard from "../../layouts/Dashboard.astro"
 import { openDB } from "../../utils/db"
+import { Icons } from "../../utils/icons";
+import JobsCreateOrUpdateModal from "./jobs-create-or-update-modal.astro"
+import JobsDelete from "./jobs-delete.astro"
 
 const db = await openDB()
 
 const search = Astro.url.searchParams.get("search") || ""
-const type = Astro.url.searchParams.get("type") || "all"
+const status = Astro.url.searchParams.get("status") || "all"
 
 const jobs = await db.all(
-  `SELECT * FROM jobs WHERE name LIKE ? AND type LIKE ?`,
-  [`%${search}%`, type === "all" ? "%" : type],
-)
+  `SELECT
+     j.*
+   FROM jobs j
+          LEFT JOIN projects p ON j.project_id = p.id
+   WHERE j.name LIKE ?
+     AND j.status LIKE ?`,
+  [`%${search}%`, status === "all" ? "%" : status]
+);
+
 ---
 <Dashboard pageTitle="Jobs">
   <section slot="content" class="card bg-white w-full rounded-none py-12 px-12 shadow-sm flex flex-col gap-8" x-data="{selectedJobId: null, selectedJob: null}">
@@ -87,7 +96,7 @@ const jobs = await db.all(
         </label>
         <button
           class="btn btn-neutral rounded-none w-[140px]"
-          x-on:click.prevent="selectedUserId = null; selectedUser = null; document.getElementById('jobs_create_or_update_modal').showModal();"
+          x-on:click.prevent="selectedJobId = null; selectedJob = null; document.getElementById('jobs_create_or_update_modal').showModal();"
         >
           Create
         </button>
@@ -105,15 +114,50 @@ const jobs = await db.all(
               <th class="text-black">Action</th>
             </tr>
           </thead>
+          <tbody>
+          {jobs.map((job: any, idx: number) => (
+            <tr>
+              <td>{idx + 1}</td>
+              <td>{job.name}</td>
+              <td>{job.type}</td>
+              <td>
+                {job.status === 'active' ? (
+                  <div class={`badge badge-soft badge-success capitalize`}>{job.status}</div>
+                ) : (
+                  <div class={`badge badge-soft badge-danger capitalize`}>{job.status}</div>
+                )}
+              </td>
+              <td class="flex items-center gap-4">
+                <a
+                  href="#"
+                  data-jobId={job.id}
+                  x-on:click.prevent="selectedJobId = $el.dataset.jobid; document.getElementById('jobs_delete').showModal();"
+                >
+                  <Icons.trash />
+                </a>
+                <a
+                  href="#"
+                  data-jobId={job.id}
+                  data-job={JSON.stringify(job)}
+                  x-on:click.prevent="selectedJobId = $el.dataset.jobid; selectedJob = $el.dataset.job; document.getElementById('jobs_create_or_update_modal').showModal();"
+                >
+                  <Icons.edit />
+                </a>
+              </td>
+            </tr>
+          ))}
+          </tbody>
         </table>
       </div>
     </div>
+    <JobsCreateOrUpdateModal />
+    <JobsDelete />
   </section>
 </Dashboard>
 <script is:inline>
   const params = new URLSearchParams(window.location.search);
-  if (!params.has("type")) {
-    params.set("type", "all");
+  if (!params.has("status")) {
+    params.set("status", "all");
 
     window.location.search = params.toString();
   }
