@@ -2,8 +2,11 @@
 import Layout from "./Layout.astro";
 import { Picture } from "astro:assets";
 const { pageTitle } = Astro.props;
+import { canPerformAction } from "../utils/roles";
 
 const { user } = Astro.locals
+
+const permissions = canPerformAction(user?.role)
 ---
 
 <Layout pageTitle={pageTitle}>
@@ -94,3 +97,10 @@ const { user } = Astro.locals
   </main>
 </Layout>
 <slot name="dialog" />
+<script is:inline define:vars={{permissions}}>
+  document.addEventListener('alpine:init', () => {
+    Alpine.store('role', {
+      permissions: permissions,
+    })
+  })
+</script>

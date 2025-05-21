@@ -169,24 +169,24 @@ if (Astro.request.method === "POST") {
         },
         syncProject() {
           const _project = JSON.parse(selectedProject);
-          this.inventory = _project.inventory_id;
-          this.additional_hosts = _project.children.filter(item => item.type === 'host').map(item => ({
+          this.inventory = _project?.inventory_id;
+          this.additional_hosts = _project?.children.filter(item => item.type === 'host').map(item => ({
             ip_address: item.ip_address,
             description: item.description
           }));
-          this.variables = _project.children.filter(item => item.type === 'variable').map(item => ({
+          this.variables = _project?.children.filter(item => item.type === 'variable').map(item => ({
             key: item.key,
             value: item.value
           }));
-          this.secrets = _project.children.filter(item => item.type === 'secret').map(item => ({
+          this.secrets = _project?.children.filter(item => item.type === 'secret').map(item => ({
             key: item.key,
             value: item.value
           }));
-          this.parameters = _project.children.filter(item => item.type === 'parameter').map(item => ({
+          this.parameters = _project?.children.filter(item => item.type === 'parameter').map(item => ({
             key: item.key,
             value: item.value
           }));
-          this.selectedHosts = _project.children.filter(item => item.type === 'inventory_host').map(item => item.value);
+          this.selectedHosts = _project?.children.filter(item => item.type === 'inventory_host').map(item => item.value);
         }
       }" x-effect="syncProject()"
       action="/dashboard/projects/projects-create-or-update"

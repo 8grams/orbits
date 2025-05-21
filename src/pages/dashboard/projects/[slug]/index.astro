@@ -168,12 +168,11 @@ for (const row of getProject) {
           <p>Executed at : {project.job_valid_until ?? '-'}</p>
         </div>
       </div>
-
       <div x-data="ansibleApp" class="flex flex-col gap-4 w-full">
         <div class="flex gap-4 justify-end">
-          <button @click="runPlaybook" class="btn btn-primary w-32">Run</button>
-          <button @click="checkPlaybook" class="btn btn-info w-32">Check</button>
-          <button @click="toggleEdit" class="btn btn-accent w-32" x-text="editMode ? 'Stop Edit' : 'Edit'"></button>
+          <button x-show="$store.role.permissions.ansible.includes('run')" x-cloak @click="runPlaybook" class="btn btn-primary w-32">Run</button>
+          <button x-show="$store.role.permissions.ansible.includes('check')" x-cloak @click="checkPlaybook" class="btn btn-info w-32">Check</button>
+          <button x-show="$store.role.permissions.ansible.includes('edit')" x-cloak @click="toggleEdit" class="btn btn-accent w-32" x-text="editMode ? 'Stop Edit' : 'Edit'"></button>
         </div>
         <div id="xterm" class="w-full h-screen bg-black text-white rounded" style="font-family: monospace;"></div>
       </div>

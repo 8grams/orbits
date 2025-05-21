@@ -66,7 +66,7 @@ async function runMigrations() {
       await db.run(
         `
         INSERT INTO users (name, email, role) VALUES (?, ?, ?)`,
-        [env.ADMIN_USERNAME, env.ADMIN_PASSWORD, "ADMIN"],
+        [env.ADMIN_USERNAME, env.ADMIN_PASSWORD, "admin"],
       );
       console.log("✅ Admin seeded");
     } else {

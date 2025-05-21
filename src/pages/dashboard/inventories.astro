@@ -82,6 +82,8 @@ const inventoriesWithHosts = inventories.map((inv: any) => {
         <button
           class="btn btn-neutral rounded-none w-[140px]"
           x-on:click.prevent="selectedInventoryId = null; selectedInventory = null; document.getElementById('inventories_create_or_update_modal').showModal();"
+          x-cloak
+          x-show="$store.role.permissions.inventories?.includes('create')"
         >
           Create
         </button>
@@ -95,7 +97,7 @@ const inventoriesWithHosts = inventories.map((inv: any) => {
               <th class="text-black">No.</th>
               <th class="text-black">Name</th>
               <th class="text-black">Hosts</th>
-              <th class="text-black">Action</th>
+              <th class="text-black" x-show="$store.role.permissions.inventories?.includes('edit') && $store.role.permissions.inventories.includes('delete')">Action</th>
             </tr>
           </thead>
           <tbody>
@@ -106,10 +108,10 @@ const inventoriesWithHosts = inventories.map((inv: any) => {
                 <td>{inventory.name}</td>
                 <td>{inventory.hosts_count}</td>
                 <td class="flex items-center gap-4">
-                  <a href="#" data-inventoryId={inventory.id} x-on:click.prevent="selectedInventoryId = $el.dataset.inventoryid; document.getElementById('inventories_delete').showModal();">
+                  <a x-cloak x-show="$store.role.permissions.inventories?.includes('delete')" href="#" data-inventoryId={inventory.id} x-on:click.prevent="selectedInventoryId = $el.dataset.inventoryid; document.getElementById('inventories_delete').showModal();">
                     <Icons.trash/>
                   </a>
-                  <a href="#" data-inventoryId={inventory.id} data-inventory={JSON.stringify(inventory)} x-on:click.prevent="selectedInventoryId = $el.dataset.inventoryid; selectedInventory = $el.dataset.inventory; document.getElementById('inventories_create_or_update_modal').showModal();">
+                  <a x-cloak x-show="$store.role.permissions.inventories.includes('edit')" href="#" data-inventoryId={inventory.id} data-inventory={JSON.stringify(inventory)} x-on:click.prevent="selectedInventoryId = $el.dataset.inventoryid; selectedInventory = $el.dataset.inventory; document.getElementById('inventories_create_or_update_modal').showModal();">
                     <Icons.edit/>
                   </a>
                 </td>

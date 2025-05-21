@@ -85,8 +85,8 @@ if (Astro.request.method === "POST") {
       },
       syncInventory() {
         const inv = JSON.parse(selectedInventory)
-        this.usePassword = inv.use_password === 1;
-        this.hosts = inv.hosts.map((host) => ({
+        this.usePassword = inv?.use_password === 1;
+        this.hosts = inv?.hosts.map((host) => ({
           ip_address: host.ip_address,
           description: host.description
         }))

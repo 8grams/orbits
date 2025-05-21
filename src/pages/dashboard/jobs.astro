@@ -97,6 +97,8 @@ const jobs = await db.all(
         <button
           class="btn btn-neutral rounded-none w-[140px]"
           x-on:click.prevent="selectedJobId = null; selectedJob = null; document.getElementById('jobs_create_or_update_modal').showModal();"
+          x-cloak
+          x-show="$store.role.permissions.jobs.includes('create')"
         >
           Create
         </button>
@@ -111,7 +113,7 @@ const jobs = await db.all(
               <th class="text-black">Project</th>
               <th class="text-black">Type</th>
               <th class="text-black">Status</th>
-              <th class="text-black">Action</th>
+              <th class="text-black" x-show="$store.role.permissions.jobs.includes('delete') && $store.role.permissions.jobs.includes('edit')" x-cloak>Action</th>
             </tr>
           </thead>
           <tbody>
@@ -130,6 +132,8 @@ const jobs = await db.all(
               <td class="flex items-center gap-4">
                 <a
                   href="#"
+                  x-cloak
+                  x-show="$store.role.permissions.jobs.includes('delete')"
                   data-jobId={job.id}
                   x-on:click.prevent="selectedJobId = $el.dataset.jobid; document.getElementById('jobs_delete').showModal();"
                 >
@@ -137,6 +141,8 @@ const jobs = await db.all(
                 </a>
                 <a
                   href="#"
+                  x-cloak
+                  x-show="$store.role.permissions.jobs.includes('edit')"
                   data-jobId={job.id}
                   data-job={JSON.stringify(job)}
                   x-on:click.prevent="selectedJobId = $el.dataset.jobid; selectedJob = $el.dataset.job; document.getElementById('jobs_create_or_update_modal').showModal();"

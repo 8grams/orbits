@@ -12,7 +12,7 @@ if (Astro.request.method === "POST") {
   ) {
     Astro?.session?.set("user", {
       username: data.get("username"),
-      role: "ADMIN",
+      role: "admin",
       name: "ADMIN",
       avatar: null,
       email: import.meta.env.ADMIN_USERNAME

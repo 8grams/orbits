@@ -1,14 +1,33 @@
-export async function canPerformAction(userRole) {
-  const ROLES = {
-    viewer: ["view"],
-    editor: ["create", "edit", "delete", "view"],
-    admin: ["create", "edit", "delete", "view"],
+export function canPerformAction(userRole) {
+  const permissions = {
+    viewer: {
+      jobs: ["view"],
+      projects: ["view"],
+      inventories: ["view"],
+      playbooks: ["view"],
+      ansible: [],
+    },
+    editor: {
+      inventories: ["create", "view", "edit", "delete"],
+      playbooks: ["create", "view", "edit", "delete"],
+      projects: ["create", "view", "edit", "delete"],
+      ansible: ["check"],
+      jobs: ["view"],
+    },
+    maintainer: {
+      inventories: ["create", "view", "edit", "delete"],
+      playbooks: ["create", "view", "edit", "delete"],
+      projects: ["create", "view", "edit", "delete"],
+      ansible: ["check", "run"],
+      jobs: ["create", "view", "edit", "delete"],
+    },
+    admin: {
+      inventories: ["create", "view", "edit", "delete"],
+      playbooks: ["create", "view", "edit", "delete"],
+      projects: ["create", "view", "edit", "delete"],
+      ansible: ["check", "run", "edit"],
+      jobs: ["create", "view", "edit", "delete"],
+    },
   };
-  const roleActions = ROLES[userRole] || [];
-  return {
-    canCreate: roleActions.includes("create"),
-    canEdit: roleActions.includes("edit"),
-    canDelete: roleActions.includes("delete"),
-    canView: roleActions.includes("view"),
-  };
+  return permissions[userRole] || {};
 }
