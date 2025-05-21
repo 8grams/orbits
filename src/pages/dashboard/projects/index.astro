@@ -81,8 +81,6 @@ for (const row of rows) {
             description: metadata_description
         });
     }
-    
-    console.log(groupedProjects, 'here')
 }
 ---
 <Dashboard pageTitle="Projects">
@@ -168,6 +166,9 @@ for (const row of rows) {
                                     <a href="#" data-projectid={project.project_id} data-project={JSON.stringify(project)} x-on:click.prevent="selectedProjectId = $el.dataset.projectid; selectedProject = $el.dataset.project; document.getElementById('projects_create_or_update').showModal();">
                                         <Icons.edit/>
                                     </a>
+                                  <a href={`/dashboard/projects/${project.project_name}`}>
+                                    <Icons.view/>
+                                  </a>
                                 </td>
                             </tr>
                     ))}
