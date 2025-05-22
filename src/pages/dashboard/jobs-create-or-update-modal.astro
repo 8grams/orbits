@@ -7,12 +7,15 @@ const { id: userId } = await db.get(`SELECT id FROM users WHERE email = ?`, [
   user?.email,
 ]);
 
-const getProjects = await db.all(`
+const getProjects = await db.all(
+  `
   SELECT id, name FROM projects WHERE user_id = ?
-`, [userId])
+`,
+  [userId],
+);
 
 if (Astro.request.method === "POST") {
-  const formData= await Astro.request.formData();
+  const formData = await Astro.request.formData();
   const name = formData.get("name");
   const project = formData.get("project");
   const type = formData.get("type");
@@ -32,20 +35,15 @@ if (Astro.request.method === "POST") {
   } else {
     console.warn("validuntil is missing or not a string");
   }
-  console.log(id)
+  console.log(id);
   if (id) {
-    await db.run(`UPDATE jobs SET name = ?, project_id = ?, type = ?, cron_syntax = ?, choose_time = ?, valid_until = ?, status = ? WHERE id = ?`, [
-      name,
-      project,
-      type,
-      cronsyntax,
-      periodically,
-      validuntil,
-      status,
-      id
-    ])
+    await db.run(
+      `UPDATE jobs SET name = ?, project_id = ?, type = ?, cron_syntax = ?, choose_time = ?, valid_until = ?, status = ? WHERE id = ?`,
+      [name, project, type, cronsyntax, periodically, validuntil, status, id],
+    );
   } else {
-    await db.run(`INSERT INTO jobs (user_id, project_id, name, type, cron_syntax, choose_time, valid_until, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    await db.run(
+      `INSERT INTO jobs (user_id, project_id, name, type, cron_syntax, choose_time, valid_until, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         userId,
         project,
@@ -54,9 +52,9 @@ if (Astro.request.method === "POST") {
         cronsyntax,
         periodically,
         validuntil,
-        status
-      ]
-    )
+        status,
+      ],
+    );
   }
   return Astro.redirect("/dashboard/jobs");
 }
@@ -64,12 +62,8 @@ if (Astro.request.method === "POST") {
 
 <dialog class="modal" id="jobs_create_or_update_modal">
   <div class="modal-box max-h-screen overflow-y-auto">
-    <form method="dialog">
-      <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2"
-      >✕</button
-      >
-    </form>
-    <form x-data="{
+    <form
+      x-data="{
       selectedType: '',
       selectedPeriodically: '',
       periodicallyText: 'Expired At',
@@ -102,10 +96,17 @@ if (Astro.request.method === "POST") {
           modal.close();
         }
       }
-     }" x-effect="syncJobs()" class="flex flex-col gap-6" method="POST" action="/dashboard/jobs-create-or-update-modal">
-      <h2 class="card-title justify-center"
+     }"
+      x-effect="syncJobs()"
+      class="flex flex-col gap-6"
+      method="POST"
+      action="/dashboard/jobs-create-or-update-modal"
+    >
+      <h2
+        class="card-title justify-center"
         x-text="selectedJobId ? 'Update Job' : 'New Job'"
-      ></h2>
+      >
+      </h2>
       <input type="hidden" name="id" :value="JSON.parse(selectedJob)?.id" />
       <div class="flex flex-col gap-2">
         <label for="name">Name</label>
@@ -129,9 +130,11 @@ if (Astro.request.method === "POST") {
           :value="JSON.parse(selectedJob)?.project_id"
         >
           <option value="" disabled selected>Choose Project</option>
-          {getProjects.map((project: any) => (
-            <option value={project.id}>{project.name}</option>
-          ))}
+          {
+            getProjects.map((project: any) => (
+              <option value={project.id}>{project.name}</option>
+            ))
+          }
         </select>
       </div>
       <div class="flex flex-col gap-2">
@@ -163,7 +166,12 @@ if (Astro.request.method === "POST") {
             >
               Expired At
             </button>
-            <input type="hidden" name="periodically" id="periodically" x-model="selectedPeriodically" />
+            <input
+              type="hidden"
+              name="periodically"
+              id="periodically"
+              x-model="selectedPeriodically"
+            />
             <div
               popover
               id="cally-popover-periodically"
@@ -181,7 +189,7 @@ if (Astro.request.method === "POST") {
                   slot="previous"
                   xmlns="http://www.w3.org/2000/svg"
                   viewBox="0 0 24 24"
-                ><path d="M15.75 19.5 8.25 12l7.5-7.5"></path></svg
+                  ><path d="M15.75 19.5 8.25 12l7.5-7.5"></path></svg
                 >
                 <svg
                   aria-label="Next"
@@ -189,7 +197,7 @@ if (Astro.request.method === "POST") {
                   slot="next"
                   xmlns="http://www.w3.org/2000/svg"
                   viewBox="0 0 24 24"
-                ><path d="m8.25 4.5 7.5 7.5-7.5 7.5"></path></svg
+                  ><path d="m8.25 4.5 7.5 7.5-7.5 7.5"></path></svg
                 >
                 <calendar-month></calendar-month>
               </calendar-date>
@@ -222,7 +230,12 @@ if (Astro.request.method === "POST") {
           >
             Expired At
           </button>
-          <input type="hidden" name="validuntil" id="validuntil" x-model="selectedExpiredAt" />
+          <input
+            type="hidden"
+            name="validuntil"
+            id="validuntil"
+            x-model="selectedExpiredAt"
+          />
           <div
             popover
             id="cally-popover-validuntil"
@@ -240,7 +253,7 @@ if (Astro.request.method === "POST") {
                 slot="previous"
                 xmlns="http://www.w3.org/2000/svg"
                 viewBox="0 0 24 24"
-              ><path d="M15.75 19.5 8.25 12l7.5-7.5"></path></svg
+                ><path d="M15.75 19.5 8.25 12l7.5-7.5"></path></svg
               >
               <svg
                 aria-label="Next"
@@ -248,7 +261,7 @@ if (Astro.request.method === "POST") {
                 slot="next"
                 xmlns="http://www.w3.org/2000/svg"
                 viewBox="0 0 24 24"
-              ><path d="m8.25 4.5 7.5 7.5-7.5 7.5"></path></svg
+                ><path d="m8.25 4.5 7.5 7.5-7.5 7.5"></path></svg
               >
               <calendar-month></calendar-month>
             </calendar-date>
@@ -256,8 +269,14 @@ if (Astro.request.method === "POST") {
         </div>
       </div>
       <div class="flex gap-4">
-        <button class="btn btn-neutral btn-outline flex-1 rounded-none" type="reset" @click="resetForm()">Cancel</button>
-        <button class="btn btn-primary flex-1 rounded-none" type="submit">Save</button>
+        <button
+          class="btn btn-neutral btn-outline flex-1 rounded-none"
+          type="reset"
+          @click="resetForm()">Cancel</button
+        >
+        <button class="btn btn-primary flex-1 rounded-none" type="submit"
+          >Save</button
+        >
       </div>
     </form>
   </div>
