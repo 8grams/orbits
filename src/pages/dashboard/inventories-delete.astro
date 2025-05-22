@@ -1,7 +1,7 @@
 ---
 import { openDB } from "../../utils/db";
 
-const db = await openDB()
+const db = await openDB();
 
 if (Astro.request.method === "POST") {
   const formData = await Astro.request.formData();
@@ -10,16 +10,21 @@ if (Astro.request.method === "POST") {
   return Astro.redirect("/dashboard/inventories");
 }
 ---
+
 <dialog class="modal" id="inventories_delete">
   <div class="modal-box w-sm">
-    <form class="flex flex-col gap-6" method="POST" action="/dashboard/inventories-delete">
+    <form
+      class="flex flex-col gap-6"
+      method="POST"
+      action="/dashboard/inventories-delete"
+    >
       <h2 class="card-title justify-center">Delete Inventory</h2>
       <p>Are you sure you want to delete this inventory?</p>
       <input type="hidden" name="id" :value="selectedInventoryId" />
       <div class="flex justify-end">
         <button
           type="button"
-          class="btn btn-neutral rounded-none"
+          class="btn btn-neutral btn-outline rounded-none"
           x-on:click="$el.closest('dialog').close()"
         >
           Cancel

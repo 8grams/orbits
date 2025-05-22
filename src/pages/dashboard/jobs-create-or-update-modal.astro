@@ -69,7 +69,40 @@ if (Astro.request.method === "POST") {
       >✕</button
       >
     </form>
-    <form x-data="{ selectedType: '' }" x-effect="selectedType = JSON.parse(selectedJob)?.type" class="flex flex-col gap-6" method="POST" action="/dashboard/jobs-create-or-update-modal">
+    <form x-data="{
+      selectedType: '',
+      selectedPeriodically: '',
+      periodicallyText: 'Expired At',
+      selectedExpiredAt: '',
+      expiredAtText: 'Expired At',
+      syncJobs() {
+        const job = JSON.parse(this.selectedJob) ?? null;
+        if (job) {
+          this.selectedType = job.type;
+          this.selectedPeriodically = job.choose_time;
+          this.periodicallyText = job.choose_time;
+          this.selectedExpiredAt = job.valid_until;
+          this.expiredAtText = job.valid_until;
+        } else {
+          this.selectedType = '';
+          this.selectedPeriodically = '';
+          this.periodicallyText = 'Expired At';
+          this.selectedExpiredAt = '';
+          this.expiredAtText = 'Expired At';
+        }
+      },
+      resetForm() {
+        this.selectedType = '';
+        this.selectedPeriodically = '';
+        this.periodicallyText = 'Expired At';
+        this.selectedExpiredAt = '';
+        this.expiredAtText = 'Expired At';
+        const modal = document.getElementById('jobs_create_or_update_modal');
+        if (modal) {
+          modal.close();
+        }
+      }
+     }" x-effect="syncJobs()" class="flex flex-col gap-6" method="POST" action="/dashboard/jobs-create-or-update-modal">
       <h2 class="card-title justify-center"
         x-text="selectedJobId ? 'Update Job' : 'New Job'"
       ></h2>
@@ -119,23 +152,18 @@ if (Astro.request.method === "POST") {
       <template x-if="selectedType === 'periodically'">
         <div class="flex flex-col gap-2">
           <label for="periodically">Periodically</label>
-          <div x-data="{ selectedDate: '', displayText: 'Expired At' }" x-effect="
-        if (selectedJob) {
-          const job = JSON.parse(selectedJob);
-          selectedDate = job.valid_until;
-          displayText = job.valid_until;
-        }">
+          <div>
             <button
               type="button"
               popovertarget="cally-popover-periodically"
               class="input input-border w-full rounded-none"
               id="cally-periodically"
               style="anchor-name:--cally1"
-              x-text="displayText"
+              x-text="periodicallyText"
             >
               Expired At
             </button>
-            <input type="hidden" name="periodically" id="periodically" x-model="selectedDate" />
+            <input type="hidden" name="periodically" id="periodically" x-model="selectedPeriodically" />
             <div
               popover
               id="cally-popover-periodically"
@@ -183,23 +211,18 @@ if (Astro.request.method === "POST") {
       </div>
       <div class="flex flex-col gap-2">
         <label for="validuntil">Valid Until</label>
-        <div x-data="{ selectedDate: '', displayText: 'Expired At' }" x-effect="
-        if (selectedJob) {
-          const job = JSON.parse(selectedJob);
-          selectedDate = job.valid_until;
-          displayText = job.valid_until;
-        }">
+        <div>
           <button
             type="button"
             popovertarget="cally-popover-validuntil"
             class="input input-border w-full rounded-none"
             id="cally-validuntil"
             style="anchor-name:--cally1"
-            x-text="displayText"
+            x-text="expiredAtText"
           >
             Expired At
           </button>
-          <input type="hidden" name="validuntil" id="validuntil" x-model="selectedDate" />
+          <input type="hidden" name="validuntil" id="validuntil" x-model="selectedExpiredAt" />
           <div
             popover
             id="cally-popover-validuntil"
@@ -232,9 +255,10 @@ if (Astro.request.method === "POST") {
           </div>
         </div>
       </div>
-      <button class="btn btn-neutral w-full rounded-none" type="submit"
-      >Save</button
-      >
+      <div class="flex gap-4">
+        <button class="btn btn-neutral btn-outline flex-1 rounded-none" type="reset" @click="resetForm()">Cancel</button>
+        <button class="btn btn-primary flex-1 rounded-none" type="submit">Save</button>
+      </div>
     </form>
   </div>
 </dialog>

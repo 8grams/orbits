@@ -95,7 +95,7 @@ const users = await db.all(
           </select>
         </label>
         <button
-          class="btn btn-neutral rounded-none w-[140px]"
+          class="btn btn-primary rounded-none w-[140px]"
           x-on:click.prevent="selectedUserId = null; selectedUser = null; document.getElementById('users_create_or_update_modal').showModal();"
         >
           Create

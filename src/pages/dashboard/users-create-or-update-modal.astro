@@ -69,9 +69,10 @@ if (Astro.request.method === "POST") {
           <option value="maintainer">Maintainer</option>
         </select>
       </div>
-      <button class="btn btn-neutral w-full rounded-none" type="submit"
-        >Save</button
-      >
+      <div class="flex gap-4">
+        <button class="btn btn-neutral btn-outline flex-1 rounded-none" type="reset" @click="document.getElementById('users_create_or_update_modal')?.close()">Cancel</button>
+        <button class="btn btn-primary flex-1 rounded-none" type="submit">Save</button>
+      </div>
     </form>
   </div>
 </dialog>

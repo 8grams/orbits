@@ -95,7 +95,7 @@ const jobs = await db.all(
           </select>
         </label>
         <button
-          class="btn btn-neutral rounded-none w-[140px]"
+          class="btn btn-primary rounded-none w-[140px]"
           x-on:click.prevent="selectedJobId = null; selectedJob = null; document.getElementById('jobs_create_or_update_modal').showModal();"
           x-cloak
           x-show="$store.role.permissions.jobs.includes('create')"

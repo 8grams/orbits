@@ -66,11 +66,6 @@ if (Astro.request.method === "POST") {
 
 <dialog class="modal" id="inventories_create_or_update_modal">
   <div class="modal-box">
-    <form method="dialog">
-      <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2"
-      >✕</button
-      >
-    </form>
     <form class="flex flex-col gap-6" x-data="{
       hosts: [{ip_address: '', description: ''}],
       addHost() {
@@ -84,13 +79,27 @@ if (Astro.request.method === "POST") {
         this.usePassword = !this.usePassword;
       },
       syncInventory() {
-        const inv = JSON.parse(selectedInventory)
+        const inv = JSON.parse(selectedInventory);
         this.usePassword = inv?.use_password === 1;
-        this.hosts = inv?.hosts.map((host) => ({
-          ip_address: host.ip_address,
-          description: host.description
-        }))
+
+        if (Array.isArray(inv?.hosts)) {
+          this.hosts = inv.hosts.map(host => ({
+            ip_address: host.ip_address,
+            description: host.description
+          }));
+        } else {
+          this.hosts = [{ ip_address: '', description: '' }];
+        }
+      },
+      resetForm() {
+        this.hosts = [{ ip_address: '', description: '' }];
+        this.usePassword = false;
+        const modal = document.getElementById('inventories_create_or_update_modal');
+        if (modal) {
+          modal.close();
+        }
       }
+
     }" x-effect="syncInventory()"
           method="POST" action="/dashboard/inventories-create-or-update-modal">
       <h2 class="card-title justify-center"
@@ -190,8 +199,10 @@ if (Astro.request.method === "POST") {
           </div>
         </template>
       </div>
-      <button class="btn btn-neutral w-full rounded-none" type="submit"
-      >Save</button>
+     <div class="flex gap-4">
+      <button class="btn btn-neutral btn-outline flex-1 rounded-none" type="reset" @click="resetForm()">Cancel</button>
+       <button class="btn btn-primary flex-1 rounded-none" type="submit">Save</button>
+     </div>
     </form>
   </div>
 </dialog>

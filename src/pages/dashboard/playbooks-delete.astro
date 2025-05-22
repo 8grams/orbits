@@ -1,7 +1,7 @@
 ---
 import { openDB } from "../../utils/db";
 
-const db = await openDB()
+const db = await openDB();
 
 if (Astro.request.method === "POST") {
   const formData = await Astro.request.formData();
@@ -10,6 +10,7 @@ if (Astro.request.method === "POST") {
   return Astro.redirect("/dashboard/playbooks");
 }
 ---
+
 <dialog id="playbooks_delete" class="modal">
   <div class="modal-box w-sm">
     <form
@@ -23,7 +24,7 @@ if (Astro.request.method === "POST") {
       <div class="flex justify-end">
         <button
           type="button"
-          class="btn btn-neutral rounded-none"
+          class="btn btn-neutral btn-outline rounded-none"
           x-on:click="$el.closest('dialog').close()"
         >
           Cancel

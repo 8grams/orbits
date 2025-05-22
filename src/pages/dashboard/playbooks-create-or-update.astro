@@ -46,10 +46,16 @@ if (Astro.request.method === "POST") {
       action="/dashboard/playbooks-create-or-update"
       x-data="PlaybooksForm()"
       x-effect="
-      const parsed = JSON.parse(selectedPlaybook);
-      typeSelected = parsed?.type;
-      yaml = parsed?.playbook;
-      jsonOutput = parsed?.playbook;
+      const parsed = JSON.parse(selectedPlaybook) ?? null;
+      if (parsed) {
+        typeSelected = parsed?.type;
+        yaml = parsed?.playbook;
+        jsonOutput = parsed?.playbook;
+      } else {
+        typeSelected = '';
+        yaml = '';
+        jsonOutput = '';
+      }
     "
     >
       <h2 class="card-title justify-center" x-text="'New Playbook'"></h2>
@@ -141,9 +147,10 @@ if (Astro.request.method === "POST") {
           :value="JSON.parse(selectedPlaybook)?.main_file"
         />
       </div>
-      <button class="btn btn-neutral w-full rounded-none" type="submit"
-        >Save</button
-      >
+      <div class="flex gap-4">
+        <button class="btn btn-neutral btn-outline flex-1 rounded-none" type="reset" @click="resetForm()">Cancel</button>
+        <button class="btn btn-primary flex-1 rounded-none" type="submit">Save</button>
+      </div>
     </form>
   </div>
 </dialog>
@@ -179,7 +186,14 @@ if (Astro.request.method === "POST") {
         this.$nextTick(() => {
           textarea.selectionStart = textarea.selectionEnd = start + tab.length;
         });
-      }
+      },
+      resetForm() {
+        this.yaml = "";
+        this.jsonOutput = "";
+        this.error = "";
+        this.typeSelected = "";
+        document.getElementById("playbooks_create_or_update").close();
+      },
     };
   }
 </script>

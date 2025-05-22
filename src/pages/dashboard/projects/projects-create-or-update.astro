@@ -128,11 +128,6 @@ if (Astro.request.method === "POST") {
 
 <dialog class="modal" id="projects_create_or_update">
   <div class="modal-box max-h-[90vh] overflow-y-auto">
-    <form method="dialog">
-      <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2"
-      >✕</button
-      >
-    </form>
     <form
       class="flex flex-col gap-6"
       method="POST"
@@ -169,24 +164,47 @@ if (Astro.request.method === "POST") {
         },
         syncProject() {
           const _project = JSON.parse(selectedProject);
-          this.inventory = _project?.inventory_id;
-          this.additional_hosts = _project?.children.filter(item => item.type === 'host').map(item => ({
-            ip_address: item.ip_address,
-            description: item.description
-          }));
-          this.variables = _project?.children.filter(item => item.type === 'variable').map(item => ({
-            key: item.key,
-            value: item.value
-          }));
-          this.secrets = _project?.children.filter(item => item.type === 'secret').map(item => ({
-            key: item.key,
-            value: item.value
-          }));
-          this.parameters = _project?.children.filter(item => item.type === 'parameter').map(item => ({
-            key: item.key,
-            value: item.value
-          }));
-          this.selectedHosts = _project?.children.filter(item => item.type === 'inventory_host').map(item => item.value);
+          this.inventory = _project?.inventory_id ?? null;
+          const children = Array.isArray(_project?.children) ? _project.children : [];
+          this.additional_hosts = children
+            .filter(item => item.type === 'host')
+            .map(item => ({
+              ip_address: item.ip_address,
+              description: item.description
+            }));
+          this.variables = children
+            .filter(item => item.type === 'variable')
+            .map(item => ({
+              key: item.key,
+              value: item.value
+            }));
+          this.secrets = children
+            .filter(item => item.type === 'secret')
+            .map(item => ({
+              key: item.key,
+              value: item.value
+            }));
+          this.parameters = children
+            .filter(item => item.type === 'parameter')
+            .map(item => ({
+              key: item.key,
+              value: item.value
+            }));
+          this.selectedHosts = children
+            .filter(item => item.type === 'inventory_host')
+            .map(item => item.value);
+        },
+        resetForm() {
+          this.inventory = null;
+          this.selectedHosts = [];
+          this.additional_hosts = [];
+          this.variables = [];
+          this.secrets = [];
+          this.parameters = [];
+          const modal = document.getElementById('projects_create_or_update');
+          if (modal) {
+            modal.close();
+          }
         }
       }" x-effect="syncProject()"
       action="/dashboard/projects/projects-create-or-update"
@@ -422,9 +440,10 @@ if (Astro.request.method === "POST") {
           </div>
         </template>
       </div>
-      <button class="btn btn-neutral w-full rounded-none" type="submit"
-      >Save</button
-      >
+      <div class="flex gap-4">
+        <button class="btn btn-neutral btn-outline flex-1 rounded-none" type="reset" @click="resetForm()">Cancel</button>
+        <button class="btn btn-primary flex-1 rounded-none" type="submit">Save</button>
+      </div>
     </form>
   </div>
 </dialog>
