@@ -83,11 +83,11 @@ const permissions = canPerformAction(user?.role)
           @click.outside="open = false"
           x-cloak
         >
+        <form method="POST" action="/logout">
           <li>
-            <form method="POST" action="/logout">
-              <button type="submit">Logout</button>
-            </form>
+            <button type="submit">Logout</button>
           </li>
+        </form>
         </ul>
       </div>
     </div>
@@ -103,4 +103,24 @@ const permissions = canPerformAction(user?.role)
       permissions: permissions,
     })
   })
+  window.formUtils = {
+    clearErrors(form) {
+      console.log("Clearing...", form.querySelectorAll(".form-error"));
+      form.querySelectorAll(".form-error").forEach(el => el.remove());
+    },
+    showError(form, inputName, msg) {
+      const input = form.querySelector(`[name="${inputName}"]`);
+      if (!input) return;
+
+      const oldError = input.nextElementSibling;
+      if (oldError?.classList.contains('form-error')) {
+        oldError.remove();
+      }
+
+      const errorEl = document.createElement('p');
+      errorEl.className = 'form-error text-sm text-red-600';
+      errorEl.textContent = msg;
+      input.insertAdjacentElement('afterend', errorEl);
+    }
+  }
 </script>

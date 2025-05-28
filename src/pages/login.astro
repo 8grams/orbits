@@ -1,4 +1,5 @@
 ---
+import Orbits from "../components/Orbits.astro";
 import Layout from "../layouts/Layout.astro";
 
 if (Astro.request.method === "POST") {
@@ -15,7 +16,10 @@ if (Astro.request.method === "POST") {
   <section class="h-screen flex items-center justify-center">
     <div class="card w-full max-w-md shadow-xl bg-base-100">
       <div class="card-body flex flex-col gap-6">
-        <h2 class="card-title justify-center text-2xl">Orbits</h2>
+        <div class="flex gap-4 items-center justify-center">
+          <Orbits />
+          <h2 class="card-title justify-center text-2xl">Orbits</h2>
+        </div>
         {
           Astro.url.searchParams.has("unauthorized") && (
             <div class="alert alert-error alert-soft mb-4 rounded-none">

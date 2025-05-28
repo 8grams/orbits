@@ -9,11 +9,11 @@ const { pageTitle } = Astro.props;
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.ico" />
     <meta name="generator" content={Astro.generator} />
     <title>Orbits - {pageTitle}</title>
   </head>
-  <body class="bg-sky-100 h-screen">
+  <body class="bg-sky-100 min-h-screen">
     <slot />
   </body>
   <slot name="script"></slot>
