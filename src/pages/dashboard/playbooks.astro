@@ -1,6 +1,6 @@
 ---
 import Dashboard from "../../layouts/Dashboard.astro";
-import PlaybooksCreateOrUpdate from "./playbooks-create-or-update.astro";
+import PlaybooksCreateOrUpdate from "./playbooks-form.astro";
 import { openDB } from "../../utils/db";
 import { Icons } from "../../utils/icons";
 import PlaybooksDelete from "./playbooks-delete.astro";
@@ -110,13 +110,13 @@ const playbooks = await db.all(`
               <th class="text-black">Name</th>
               <th class="text-black">Type</th>
               <th class="text-black">URI</th>
-              <th class="text-black" x-show="$store.role.permissions.projects.includes('delete') && $store.role.permissions.projects.includes('edit')" x-cloak>Action</th>
+              <th class="text-black" x-show="$store.role.permissions.projects.includes('delete') && $store.role.permissions.projects.includes('edit')" x-cloak>&nbsp;</th>
             </tr>
           </thead>
           <tbody>
           {playbooks.map((playbook: any, idx: number) => (
             <tr>
-              <td>{idx + 1}</td>
+              <td>{idx + 1}.</td>
               <td>{playbook.name}</td>
               <td class="capitalize">{playbook.type}</td>
               <td>{playbook.main_file}</td>

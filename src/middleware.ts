@@ -6,7 +6,7 @@ export const onRequest: MiddlewareHandler = async (Astro, next) => {
   const isDashboardRoute = Astro.url.pathname.startsWith("/dashboard");
   const ProtectedRoutes = [
     "/dashboard/users",
-    "/dashboard/users-create-or-update-modal",
+    "/dashboard/users-form",
     "/dashboard/users-delete",
   ].includes(Astro.url.pathname);
 

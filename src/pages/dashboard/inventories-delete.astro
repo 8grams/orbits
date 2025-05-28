@@ -18,7 +18,7 @@ if (Astro.request.method === "POST") {
       method="POST"
       action="/dashboard/inventories-delete"
     >
-      <h2 class="card-title justify-center">Delete Inventory</h2>
+      <h2 class="card-title">Delete Inventory</h2>
       <p>Are you sure you want to delete this inventory?</p>
       <input type="hidden" name="id" :value="selectedInventoryId" />
       <div class="flex justify-end">

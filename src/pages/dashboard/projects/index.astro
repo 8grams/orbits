@@ -1,7 +1,7 @@
 ---
 import Dashboard from "../../../layouts/Dashboard.astro";
 import { openDB } from "../../../utils/db";
-import ProjectsCreateOrUpdate from "./projects-create-or-update.astro";
+import ProjectsCreateOrUpdate from "./projects-form.astro";
 import { Icons } from "../../../utils/icons";
 import ProjectsDelete from "./projects-delete.astro";
 
@@ -151,13 +151,13 @@ for (const row of rows) {
                         <th class="text-black">Name</th>
                         <th class="text-black">Inventories</th>
                         <th class="text-black">Playbook</th>
-                        <th class="text-black" x-cloak x-show="$store.role.permissions.projects.includes('view')">Action</th>
+                        <th class="text-black" x-cloak x-show="$store.role.permissions.projects.includes('view')">&nbsp;</th>
                     </tr>
                     </thead>
                     <tbody>
                     {groupedProjects.map((project: any, idx: number) => (
                             <tr>
-                                <td>{idx + 1}</td>
+                                <td>{idx + 1}.</td>
                                 <td>{project.project_name}</td>
                                 <td>{project.inventory_name}</td>
                                 <td>{project.playbook_name}</td>

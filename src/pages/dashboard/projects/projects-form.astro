@@ -207,7 +207,7 @@ if (Astro.request.method === "POST") {
           }
         }
       }" x-effect="syncProject()"
-      action="/dashboard/projects/projects-create-or-update"
+      action="/dashboard/projects/projects-form"
     >
       <input type="hidden" name="id" :value="JSON.parse(selectedProject)?.project_id" />
       <h2
@@ -264,25 +264,24 @@ if (Astro.request.method === "POST") {
       <template x-if="inventory">
         <div class="flex flex-col gap-6">
           <div class="flex flex-row justify-between">
-            <label>IP Address</label>
-            <label>Description</label>
+            <label class="font-semibold">IP Address</label>
+            <label class="font-semibold">Description</label>
+            <label class="font-semibold">&nbsp;</label>
           </div>
           {
             inventoriesWithHosts
               .flatMap((inventory: any) => inventory.hosts)
               .map((host: any) => (
                 <div class="flex justify-between items-center">
-                  <p>{host.ip_address}</p>
-                  <div class="flex items-center gap-4">
-                    <p>{host.description}</p>
-                    <input
-                      name="inventory_hosts"
-                      type="checkbox"
-                      value={host.id}
-                      x-model="selectedHosts"
-                      class="toggle toggle-md"
-                    />
-                  </div>
+                  <label>{host.ip_address}</label>
+                  <label>{host.description}</label>
+                  <input
+                    name="inventory_hosts"
+                    type="checkbox"
+                    value={host.id}
+                    x-model="selectedHosts"
+                    class="toggle toggle-md"
+                  />
                 </div>
               ))
           }

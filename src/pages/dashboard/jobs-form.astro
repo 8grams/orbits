@@ -100,10 +100,10 @@ if (Astro.request.method === "POST") {
       x-effect="syncJobs()"
       class="flex flex-col gap-6"
       method="POST"
-      action="/dashboard/jobs-create-or-update-modal"
+      action="/dashboard/jobs-form"
     >
       <h2
-        class="card-title justify-center"
+        class="card-title"
         x-text="selectedJobId ? 'Update Job' : 'New Job'"
       >
       </h2>

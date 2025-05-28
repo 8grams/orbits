@@ -24,6 +24,12 @@ const permissions = canPerformAction(user?.role)
         </li>
         <li>
           <a
+            :class="current === '/dashboard/playbooks' ? 'underline underline-offset-12 font-bold text-sky-500' : 'text-gray-500'"
+            href="/dashboard/playbooks">Playbooks</a
+          >
+        </li>
+        <li>
+          <a
             :class="current.includes('/dashboard/projects')  ? 'underline underline-offset-12 font-bold text-sky-500' : 'text-gray-500'"
             href="/dashboard/projects">Projects</a
           >
@@ -32,12 +38,6 @@ const permissions = canPerformAction(user?.role)
           <a
             :class="current === '/dashboard/jobs' ? 'underline underline-offset-12 font-bold text-sky-500' : 'text-gray-500'"
             href="/dashboard/jobs">Jobs</a
-          >
-        </li>
-        <li>
-          <a
-            :class="current === '/dashboard/playbooks' ? 'underline underline-offset-12 font-bold text-sky-500' : 'text-gray-500'"
-            href="/dashboard/playbooks">Playbooks</a
           >
         </li>
         <li>

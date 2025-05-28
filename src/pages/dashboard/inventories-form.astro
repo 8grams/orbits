@@ -101,9 +101,9 @@ if (Astro.request.method === "POST") {
       }
 
     }" x-effect="syncInventory()"
-          method="POST" action="/dashboard/inventories-create-or-update-modal">
-      <h2 class="card-title justify-center"
-          x-text="(JSON.parse(selectedInventory)?.id ? 'Update' : 'Create') + ' Inventory'">
+          method="POST" action="/dashboard/inventories-form">
+      <h2 class="card-title"
+          x-text="(JSON.parse(selectedInventory)?.id ? 'Update' : 'New') + ' Inventory'">
       </h2>
       <input type="hidden" name="id" :value="JSON.parse(selectedInventory)?.id" />
       <div class="flex flex-col gap-2">

@@ -40,7 +40,7 @@ if (Astro.request.method === "POST") {
     <form
       class="flex flex-col gap-6"
       method="POST"
-      action="/dashboard/playbooks-create-or-update"
+      action="/dashboard/playbooks-form"
       x-data="PlaybooksForm()"
       x-effect="
       const parsed = JSON.parse(selectedPlaybook) ?? null;
@@ -55,7 +55,7 @@ if (Astro.request.method === "POST") {
       }
     "
     >
-      <h2 class="card-title justify-center" x-text="'New Playbook'"></h2>
+      <h2 class="card-title" x-text="'New Playbook'"></h2>
       <input
         type="hidden"
         name="id"
@@ -95,7 +95,7 @@ if (Astro.request.method === "POST") {
             <textarea
               id="yaml"
               name="yaml"
-              placeholder="YAML"
+              placeholder="Input Playbook in YAML format"
               class="textarea textarea-bordered w-full rounded-none"
               required
               x-model="yaml"
@@ -103,21 +103,17 @@ if (Astro.request.method === "POST") {
               @keydown.tab.prevent="insertTab($event)"></textarea>
           </div>
           <div x-show="error" class="text-red-600 mt-1" x-text="error"></div>
-          <pre
-            class="bg-gray-100 p-3 mt-2 rounded overflow-auto text-sm whitespace-pre max-h-64"
-            x-text="jsonOutput">
-          </pre>
         </div>
       </template>
       <template x-if="typeSelected === 'git'">
         <div class="flex flex-col gap-6">
           <div class="flex flex-col gap-2">
-            <label for="git_url">Git URL</label>
+            <label for="git_url">Repository URL</label>
             <input
               id="git_url"
               type="text"
               name="git_url"
-              placeholder="Git URL"
+              placeholder="e.g. git@github.com:8grams/orbits.git"
               class="input input-bordered w-full rounded-none"
               required
               :value="JSON.parse(selectedPlaybook)?.git_url"
@@ -128,25 +124,26 @@ if (Astro.request.method === "POST") {
             <textarea
               id="private_key"
               name="private_key"
-              placeholder="Private Key"
+              placeholder="SSH Private Key"
               class="textarea textarea-bordered w-full rounded-none"
               required
               :value="JSON.parse(selectedPlaybook)?.private_key"></textarea>
           </div>
+          <div class="flex flex-col gap-2">
+            <label for="main_file">Main File</label>
+            <input
+              id="main_file"
+              type="text"
+              name="main_file"
+              placeholder="Main File Path e.g. playbooks/my_playbook.yml"
+              class="input input-bordered w-full rounded-none"
+              required
+              :value="JSON.parse(selectedPlaybook)?.main_file"
+            />
+          </div>
         </div>
+        
       </template>
-      <div class="flex flex-col gap-2">
-        <label for="main_file">Main File</label>
-        <input
-          id="main_file"
-          type="text"
-          name="main_file"
-          placeholder="Main File"
-          class="input input-bordered w-full rounded-none"
-          required
-          :value="JSON.parse(selectedPlaybook)?.main_file"
-        />
-      </div>
       <div class="flex gap-4">
         <button
           class="btn btn-neutral btn-outline flex-1 rounded-none"
@@ -161,7 +158,7 @@ if (Astro.request.method === "POST") {
   </div>
 </dialog>
 <script
-  name="script"
+  is:inline
   src="https://cdn.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js"></script>
 <script is:inline>
   function PlaybooksForm() {

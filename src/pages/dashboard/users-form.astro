@@ -29,10 +29,10 @@ if (Astro.request.method === "POST") {
     <form
       class="flex flex-col gap-6"
       method="POST"
-      action="/dashboard/users-create-or-update-modal"
+      action="/dashboard/users-form"
     >
       <h2
-        class="card-title justify-center"
+        class="card-title"
         x-text="JSON.parse(selectedUser)?.id ? 'Update' : 'Create' + ' User'"
       >
       </h2>

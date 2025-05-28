@@ -1,6 +1,6 @@
 ---
 import Dashboard from "../../layouts/Dashboard.astro";
-import InventoriesCreateOrUpdateModal from "./inventories-create-or-update-modal.astro";
+import InventoriesCreateOrUpdateModal from "./inventories-form.astro";
 import { openDB } from "../../utils/db"
 import { Icons } from "../../utils/icons";
 import InventoriesDelete from "./inventories-delete.astro";
@@ -96,15 +96,15 @@ const inventoriesWithHosts = inventories.map((inv: any) => {
             <tr>
               <th class="text-black">No.</th>
               <th class="text-black">Name</th>
-              <th class="text-black">Hosts</th>
-              <th class="text-black" x-show="$store.role.permissions.inventories?.includes('edit') && $store.role.permissions.inventories.includes('delete')">Action</th>
+              <th class="text-black">Total Hosts</th>
+              <th class="text-black" x-show="$store.role.permissions.inventories?.includes('edit') && $store.role.permissions.inventories.includes('delete')">&nbsp;</th>
             </tr>
           </thead>
           <tbody>
           {
             inventoriesWithHosts.map((inventory: any, index: number) => (
               <tr>
-                <td>{index + 1}</td>
+                <td>{index + 1}.</td>
                 <td>{inventory.name}</td>
                 <td>{inventory.hosts_count}</td>
                 <td class="flex items-center gap-4">

@@ -18,7 +18,7 @@ if (Astro.request.method === "POST") {
       method="POST"
       action="/dashboard/playbooks-delete"
     >
-      <h2 class="card-title justify-center">Delete Playbook</h2>
+      <h2 class="card-title">Delete Playbook</h2>
       <p>Are you sure you want to delete this Playbook?</p>
       <input type="hidden" name="id" :value="selectedPlaybookId" />
       <div class="flex justify-end">

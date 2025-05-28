@@ -18,7 +18,7 @@ if (Astro.request.method === "POST") {
       method="POST"
       action="/dashboard/jobs-delete"
     >
-      <h2 class="card-title justify-center">Delete Job</h2>
+      <h2 class="card-title">Delete Job</h2>
       <p>Are you sure you want to delete this Job?</p>
       <input type="hidden" name="id" :value="selectedJobId" />
       <div class="flex justify-end">
