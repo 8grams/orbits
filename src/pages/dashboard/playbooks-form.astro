@@ -1,5 +1,6 @@
 ---
 import { openDB } from "../../utils/db";
+import formValidate from "../../utils/formValidation";
 
 const { user } = Astro.locals;
 const db = await openDB();
@@ -19,9 +20,12 @@ if (Astro.request.method === "POST") {
 
   const errors: Record<string, string> = {};
 
-  if (!name) errors.name = "Nama tidak boleh kosong";
+  if (formValidate.notEmpty(name)) errors.name = "Nama tidak boleh kosong";
 
-  if (!type || !["static", "git"].includes(type as string))
+  if (
+    formValidate.notEmpty(type) ||
+    formValidate.notMatchValues(["static", "git"], type)
+  )
     errors.type = "Tipe harus dipilih";
 
   if (type === "static") {
@@ -29,19 +33,15 @@ if (Astro.request.method === "POST") {
   }
 
   if (type === "git") {
-    const pattern = /^git@github\.com:[\w.-]+\/[\w.-]+\.git$/;
-    const sshKeyPattern =
-      /-----BEGIN (RSA|OPENSSH) PRIVATE KEY-----[\s\S]+-----END (RSA|OPENSSH) PRIVATE KEY-----/;
-    const mainFilePattern = /^[\w./-]+\.ya?ml$/;
-    if (!pattern.test(gitUrl as string)) {
+    if (formValidate.repositoryUrl(gitUrl)) {
       errors.git_url =
         "Format repository harus seperti git@github.com:user/repo.git";
     }
-    if (!sshKeyPattern.test(privateKey as string)) {
+    if (formValidate.sshValidation(privateKey as string)) {
       errors.private_key =
         "Format SSH Key tidak valid. Harus diawali dan diakhiri dengan header yang benar.";
     }
-    if (!mainFilePattern.test(mainFile as string)) {
+    if (formValidate.mainFile(mainFile as string)) {
       errors.main_file =
         "Main file harus path relatif dan berekstensi .yml atau .yaml";
     }

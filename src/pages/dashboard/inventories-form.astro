@@ -1,10 +1,13 @@
 ---
 import { Icons } from "../../utils/icons";
-import { openDB } from "../../utils/db"
+import { openDB } from "../../utils/db";
+import formValidate from "../../utils/formValidation";
 
-const { user } = Astro.locals
+const { user } = Astro.locals;
 const db = await openDB();
-const { id: userId } = await db.get(`SELECT id FROM users WHERE email = ?`, [user?.email])
+const { id: userId } = await db.get(`SELECT id FROM users WHERE email = ?`, [
+  user?.email,
+]);
 
 if (Astro.request.method === "POST") {
   const formData = await Astro.request.formData();
@@ -15,58 +18,110 @@ if (Astro.request.method === "POST") {
   const hosts = hostIpAddress.map((iq, index) => ({
     ip_address: iq,
     description: hostDescription[index],
-  }))
+  }));
   const usePassword = formData.get("use_password") ? 1 : 0;
   const username = formData.get("username");
   const password = formData.get("password");
   const privateKey = formData.get("private_key");
 
-  if (id) {
-    await db.run(`
-      UPDATE inventories SET name = ?, use_password = ?, username = ?, password = ?, private_key = ? WHERE id = ?`, [
-      name,
-      usePassword,
-      username,
-      password,
-      privateKey,
-      id
-    ])
-    await db.run(`DELETE FROM inventory_hosts WHERE inventory_id = ?`, [id])
-    for (const [ip, desc] of hosts.map((host) => [host.ip_address, host.description])) {
-      await db.run(`INSERT INTO inventory_hosts (inventory_id, ip_address, description) VALUES (?, ?, ?)`, [
-        id,
-        ip,
-        desc
-      ])
-    }
+  const errors: Record<string, string> = {};
+
+  if (formValidate.notEmpty(name)) errors.name = "Nama tidak boleh kosong";
+
+  if (formValidate.isEmptyElement(hostIpAddress))
+    errors["ip_address[]"] = "Host minial harus satu";
+
+  if (
+    formValidate.isIpAddress(hostIpAddress, (elements: string[], rgx: RegExp) =>
+      elements.filter((ip) => ip.trim() !== "" && !rgx.test(ip.trim())),
+    )
+  )
+    errors["ip_address[]"] = "IP Address tidak valid";
+
+  if (formValidate.isEmptyElement(hostDescription))
+    errors["description[]"] = "Deskripsi minimal harus satu";
+
+  if (
+    formValidate.customValidation(hostDescription, (elements: string[]) =>
+      elements.filter((el) => el.trim() === ""),
+    )
+  )
+    errors["description[]"] = "Deskripsi tidak boleh kosong";
+
+  if (formValidate.notEmpty(username))
+    errors.username = "Username tidak boleh kosong";
+
+  if (formValidate.hasAnySpace(username))
+    errors.username = "Username tidak boleh mengandung spasi";
+
+  if (usePassword === 1) {
+    if (formValidate.notEmpty(password))
+      errors.password = "Password tidak boleh kosong";
+
+    if (formValidate.hasAnySpace(password))
+      errors.password = "Password tidak boleh mengandung spasi";
   } else {
-    const result = await db.run(`
-    INSERT INTO inventories (user_id, name, use_password, username, password, private_key) VALUES (?, ?, ?, ?, ?, ?)`, [
-      userId,
-      name,
-      usePassword,
-      username,
-      password,
-      privateKey
-    ])
-    const inventoryId = result.lastID;
-    for (const [ip, desc] of hosts.map((host) => [host.ip_address, host.description])) {
-      await db.run(`INSERT INTO inventory_hosts (inventory_id, ip_address, description) VALUES (?, ?, ?)`, [
-        inventoryId,
-        ip,
-        desc
-      ])
+    if (formValidate.sshValidation(privateKey)) {
+      errors["private_key"] =
+        "Format SSH Private Key tidak valid. Harus diawali dan diakhiri dengan header yang benar";
     }
   }
-  return Astro.redirect("/dashboard/inventories");
+
+  if (Object.keys(errors).length > 0) {
+    return new Response(JSON.stringify({ success: false, errors }), {
+      status: 400,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
+  if (id) {
+    await db.run(
+      `
+      UPDATE inventories SET name = ?, use_password = ?, username = ?, password = ?, private_key = ? WHERE id = ?`,
+      [name, usePassword, username, password, privateKey, id],
+    );
+    await db.run(`DELETE FROM inventory_hosts WHERE inventory_id = ?`, [id]);
+    for (const [ip, desc] of hosts.map((host) => [
+      host.ip_address,
+      host.description,
+    ])) {
+      await db.run(
+        `INSERT INTO inventory_hosts (inventory_id, ip_address, description) VALUES (?, ?, ?)`,
+        [id, ip, desc],
+      );
+    }
+  } else {
+    const result = await db.run(
+      `
+    INSERT INTO inventories (user_id, name, use_password, username, password, private_key) VALUES (?, ?, ?, ?, ?, ?)`,
+      [userId, name, usePassword, username, password, privateKey],
+    );
+    const inventoryId = result.lastID;
+    for (const [ip, desc] of hosts.map((host) => [
+      host.ip_address,
+      host.description,
+    ])) {
+      await db.run(
+        `INSERT INTO inventory_hosts (inventory_id, ip_address, description) VALUES (?, ?, ?)`,
+        [inventoryId, ip, desc],
+      );
+    }
+  }
+  return new Response(
+    JSON.stringify({
+      success: true,
+      redirect: "/dashboard/inventories",
+    }),
+    { status: 200, headers: { "Content-Type": "application/json" } },
+  );
 }
-
-
 ---
 
 <dialog class="modal" id="inventories_create_or_update_modal">
   <div class="modal-box">
-    <form class="flex flex-col gap-6" x-data="{
+    <form
+      class="flex flex-col gap-6"
+      x-data="{
       hosts: [{ip_address: '', description: ''}],
       addHost() {
         this.hosts.push({ ip_address: '', description: '' });
@@ -100,12 +155,21 @@ if (Astro.request.method === "POST") {
         }
       }
 
-    }" x-effect="syncInventory()"
-          method="POST" action="/dashboard/inventories-form">
-      <h2 class="card-title"
-          x-text="(JSON.parse(selectedInventory)?.id ? 'Update' : 'New') + ' Inventory'">
+    }"
+      x-effect="syncInventory()"
+      method="POST"
+      action="/dashboard/inventories-form"
+    >
+      <h2
+        class="card-title"
+        x-text="(JSON.parse(selectedInventory)?.id ? 'Update' : 'New') + ' Inventory'"
+      >
       </h2>
-      <input type="hidden" name="id" :value="JSON.parse(selectedInventory)?.id" />
+      <input
+        type="hidden"
+        name="id"
+        :value="JSON.parse(selectedInventory)?.id"
+      />
       <div class="flex flex-col gap-2">
         <label for="name">Name</label>
         <input
@@ -121,7 +185,11 @@ if (Astro.request.method === "POST") {
       <div class="flex flex-col gap-4">
         <div class="flex items-center gap-2">
           <label for="hosts" class="flex items-center">Hosts</label>
-          <Icons.add class="w-5 h-5 cursor-pointer" @click="addHost()"/>
+          <Icons.add class="w-5 h-5 cursor-pointer" @click="addHost()" />
+        </div>
+        <div class="flex flex-row items-center gap-4">
+          <div id="errors_ip_address" class="text-sm text-red-600"></div>
+          <div id="errors_description" class="text-sm text-red-600"></div>
         </div>
         <template x-for="(host, index) in hosts" :key="index">
           <div class="flex flex-row gap-2 items-end">
@@ -149,14 +217,25 @@ if (Astro.request.method === "POST") {
                 required
               />
             </div>
-            <Icons.trash class="w-6 h-6 cursor-pointer" @click="removeHost(index)" />
+            <Icons.trash
+              class="w-6 h-6 cursor-pointer"
+              @click="removeHost(index)"
+              x-show="index > 0"
+            />
           </div>
         </template>
       </div>
       <div class="flex flex-col gap-2">
         <label>SSH Configuration</label>
         <div class="flex flex-row items-center gap-2">
-          <input id="use-password" :checked="usePassword" @change="toggleUsePassword()" name="use_password" type="checkbox" class="checkbox checkbox-neutral checkbox-sm" />
+          <input
+            id="use-password"
+            :checked="usePassword"
+            @change="toggleUsePassword()"
+            name="use_password"
+            type="checkbox"
+            class="checkbox checkbox-neutral checkbox-sm"
+          />
           <label for="use-password">Use Password</label>
         </div>
         <div class="flex flex-col gap-2">
@@ -194,15 +273,54 @@ if (Astro.request.method === "POST") {
               placeholder="SSH Private Key"
               class="textarea textarea-bordered w-full rounded-none"
               required
-              :value="JSON.parse(selectedInventory)?.private_key"
-            ></textarea>
+              :value="JSON.parse(selectedInventory)?.private_key"></textarea>
           </div>
         </template>
       </div>
-     <div class="flex gap-4">
-      <button class="btn btn-neutral btn-outline flex-1 rounded-none" type="reset" @click="resetForm()">Cancel</button>
-       <button class="btn btn-primary flex-1 rounded-none" type="submit">Save</button>
-     </div>
+      <div class="flex gap-4">
+        <button
+          class="btn btn-neutral btn-outline flex-1 rounded-none"
+          type="reset"
+          @click="resetForm()">Cancel</button
+        >
+        <button class="btn btn-primary flex-1 rounded-none" type="submit"
+          >Save</button
+        >
+      </div>
     </form>
   </div>
 </dialog>
+<script is:inline>
+  const form = document.querySelector(
+    "#inventories_create_or_update_modal form",
+  );
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    window.formUtils.clearErrors(form);
+
+    const data = new FormData(form);
+
+    try {
+      const res = await fetch(form.action, {
+        method: "POST",
+        body: data,
+      });
+      const result = await res.json();
+      if (!res.ok) {
+        if (result.errors) {
+          for (const [field, msg] of Object.entries(result.errors)) {
+            window.formUtils.showError(form, field, msg);
+          }
+        } else {
+          alert("Terjadi kesalahan");
+        }
+      } else if (result.success) {
+        window.location.href = result.redirect;
+      }
+    } catch (error) {
+      alert("Error jaringan, coba lagi");
+    }
+  });
+</script>

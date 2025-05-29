@@ -4,9 +4,9 @@ import { Picture } from "astro:assets";
 const { pageTitle } = Astro.props;
 import { canPerformAction } from "../utils/roles";
 
-const { user } = Astro.locals
+const { user } = Astro.locals;
 
-const permissions = canPerformAction(user?.role)
+const permissions = canPerformAction(user?.role);
 ---
 
 <Layout pageTitle={pageTitle}>
@@ -48,18 +48,22 @@ const permissions = canPerformAction(user?.role)
         </li>
       </ul>
       <div class="relative" x-data="{ open: false }">
-        <button class="btn btn-ghost flex items-center gap-2" @click="open = !open">
-          {user?.avatar && (
-            <Picture
-              src={user?.avatar as string}
-              alt={user?.name as string}
-              width="30"
-              height="30"
-              class="rounded-full"
-              quality={100}
-
-            />
-          )}
+        <button
+          class="btn btn-ghost flex items-center gap-2"
+          @click="open = !open"
+        >
+          {
+            user?.avatar && (
+              <Picture
+                src={user?.avatar as string}
+                alt={user?.name as string}
+                width="30"
+                height="30"
+                class="rounded-full"
+                quality={100}
+              />
+            )
+          }
           <span>{user?.name}</span>
           <svg
             class="ml-2 w-4 h-4 transition-transform"
@@ -83,11 +87,11 @@ const permissions = canPerformAction(user?.role)
           @click.outside="open = false"
           x-cloak
         >
-        <form method="POST" action="/logout">
-          <li>
-            <button type="submit">Logout</button>
-          </li>
-        </form>
+          <form method="POST" action="/logout">
+            <li>
+              <button type="submit">Logout</button>
+            </li>
+          </form>
         </ul>
       </div>
     </div>
@@ -97,30 +101,47 @@ const permissions = canPerformAction(user?.role)
   </main>
 </Layout>
 <slot name="dialog" />
-<script is:inline define:vars={{permissions}}>
-  document.addEventListener('alpine:init', () => {
-    Alpine.store('role', {
+<script is:inline define:vars={{ permissions }}>
+  document.addEventListener("alpine:init", () => {
+    Alpine.store("role", {
       permissions: permissions,
-    })
-  })
+    });
+  });
   window.formUtils = {
     clearErrors(form) {
-      console.log("Clearing...", form.querySelectorAll(".form-error"));
-      form.querySelectorAll(".form-error").forEach(el => el.remove());
+      form.querySelectorAll(".form-error").forEach((el) => el.remove());
+      document.querySelectorAll('[id^="errors_"]').forEach((container) => {
+        container.textContent = "";
+      });
     },
     showError(form, inputName, msg) {
-      const input = form.querySelector(`[name="${inputName}"]`);
-      if (!input) return;
-
-      const oldError = input.nextElementSibling;
-      if (oldError?.classList.contains('form-error')) {
-        oldError.remove();
+      const inputs = form.querySelectorAll(`[name="${inputName}"]`);
+      if (!inputs.length) return;
+      inputs.forEach((input) => {
+        const next = input.nextElementSibling;
+        if (next?.classList.contains("form-error")) {
+          next.remove();
+        }
+      });
+      if (inputName.includes("[]")) {
+        const containerId = "errors_" + inputName.replace(/\[\]/g, "");
+        const container = document.getElementById(containerId);
+        if (container) {
+          container.textContent = msg;
+        } else {
+          const errorEl = document.createElement("p");
+          errorEl.className = "form-error text-sm text-red-600";
+          errorEl.textContent = msg;
+          inputs[0].insertAdjacentElement("afterend", errorEl);
+        }
+      } else {
+        inputs.forEach((input) => {
+          const errorEl = document.createElement("p");
+          errorEl.className = "form-error text-sm text-red-600";
+          errorEl.textContent = msg;
+          input.insertAdjacentElement("afterend", errorEl);
+        });
       }
-
-      const errorEl = document.createElement('p');
-      errorEl.className = 'form-error text-sm text-red-600';
-      errorEl.textContent = msg;
-      input.insertAdjacentElement('afterend', errorEl);
-    }
-  }
+    },
+  };
 </script>
