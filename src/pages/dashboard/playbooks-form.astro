@@ -17,6 +17,43 @@ if (Astro.request.method === "POST") {
   const yaml = formData.get("yaml");
   const id = formData.get("id");
 
+  const errors: Record<string, string> = {};
+
+  if (!name) errors.name = "Nama tidak boleh kosong";
+
+  if (!type || !["static", "git"].includes(type as string))
+    errors.type = "Tipe harus dipilih";
+
+  if (type === "static") {
+    if (!yaml) errors.yaml = "Kode tidak boleh kosong";
+  }
+
+  if (type === "git") {
+    const pattern = /^git@github\.com:[\w.-]+\/[\w.-]+\.git$/;
+    const sshKeyPattern =
+      /-----BEGIN (RSA|OPENSSH) PRIVATE KEY-----[\s\S]+-----END (RSA|OPENSSH) PRIVATE KEY-----/;
+    const mainFilePattern = /^[\w./-]+\.ya?ml$/;
+    if (!pattern.test(gitUrl as string)) {
+      errors.git_url =
+        "Format repository harus seperti git@github.com:user/repo.git";
+    }
+    if (!sshKeyPattern.test(privateKey as string)) {
+      errors.private_key =
+        "Format SSH Key tidak valid. Harus diawali dan diakhiri dengan header yang benar.";
+    }
+    if (!mainFilePattern.test(mainFile as string)) {
+      errors.main_file =
+        "Main file harus path relatif dan berekstensi .yml atau .yaml";
+    }
+  }
+
+  if (Object.keys(errors).length > 0) {
+    return new Response(JSON.stringify({ success: false, errors }), {
+      status: 400,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
   if (id) {
     await db.run(
       `
@@ -31,7 +68,32 @@ if (Astro.request.method === "POST") {
       [userId, name, type, gitUrl, privateKey, mainFile, yaml],
     );
   }
-  return Astro.redirect("/dashboard/playbooks");
+
+  return new Response(
+    JSON.stringify({
+      success: true,
+      redirect: "/dashboard/playbooks",
+    }),
+    {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    },
+  );
+}
+
+if (Astro.request.method === "GET") {
+  const id = Astro.url.searchParams.get("id") ?? "";
+  if (id) {
+    const res = await db.get("SELECT playbook FROM playbooks WHERE id = ?", [
+      id,
+    ]);
+    return new Response(
+      JSON.stringify({
+        playbook: res.playbook,
+        redirect: "/dashboard/playbooks",
+      }),
+    );
+  }
 }
 ---
 
@@ -41,19 +103,8 @@ if (Astro.request.method === "POST") {
       class="flex flex-col gap-6"
       method="POST"
       action="/dashboard/playbooks-form"
-      x-data="PlaybooksForm()"
-      x-effect="
-      const parsed = JSON.parse(selectedPlaybook) ?? null;
-      if (parsed) {
-        typeSelected = parsed?.type;
-        yaml = parsed?.playbook;
-        jsonOutput = parsed?.playbook;
-      } else {
-        typeSelected = '';
-        yaml = '';
-        jsonOutput = '';
-      }
-    "
+      x-data="{ typeSelected: '' }"
+      x-effect="typeSelected = JSON.parse(selectedPlaybook)?.type || ''"
     >
       <h2 class="card-title" x-text="'New Playbook'"></h2>
       <input
@@ -61,6 +112,13 @@ if (Astro.request.method === "POST") {
         name="id"
         :value="JSON.parse(selectedPlaybook)?.id"
       />
+      <input
+        type="hidden"
+        name="yaml"
+        id="yaml_input"
+        :value="JSON.parse(selectedPlaybook)?.playbook"
+      />
+
       <div class="flex flex-col gap-2">
         <label for="name">Name</label>
         <input
@@ -80,32 +138,24 @@ if (Astro.request.method === "POST") {
           name="type"
           id="type"
           required
-          @change="typeSelected = $event.target.value"
-          :value="JSON.parse(selectedPlaybook)?.type"
+          x-model="typeSelected"
         >
-          <option value="" disabled selected>Choose Type</option>
+          <option value="" disabled>Choose Type</option>
           <option value="static">Static</option>
           <option value="git">Git</option>
         </select>
       </div>
-      <template x-if="typeSelected === 'static'">
+      <div x-show="typeSelected === 'static'">
         <div class="flex flex-col gap-6">
-          <div class="flex flex-col gap-2">
-            <label for="yaml">YAML</label>
-            <textarea
-              id="yaml"
-              name="yaml"
-              placeholder="Input Playbook in YAML format"
-              class="textarea textarea-bordered w-full rounded-none"
-              required
-              x-model="yaml"
-              @input="parseYaml"
-              @keydown.tab.prevent="insertTab($event)"></textarea>
+          <div
+            id="editor"
+            class="h-[400px] max-h-[60vh] border border-base-300 rounded-lg overflow-auto"
+          >
           </div>
-          <div x-show="error" class="text-red-600 mt-1" x-text="error"></div>
         </div>
-      </template>
-      <template x-if="typeSelected === 'git'">
+      </div>
+
+      <div x-show="typeSelected === 'git'">
         <div class="flex flex-col gap-6">
           <div class="flex flex-col gap-2">
             <label for="git_url">Repository URL</label>
@@ -115,10 +165,11 @@ if (Astro.request.method === "POST") {
               name="git_url"
               placeholder="e.g. git@github.com:8grams/orbits.git"
               class="input input-bordered w-full rounded-none"
-              required
+              x-bind:required="typeSelected === 'git'"
               :value="JSON.parse(selectedPlaybook)?.git_url"
             />
           </div>
+
           <div class="flex flex-col gap-2">
             <label for="private_key">Private Key</label>
             <textarea
@@ -126,9 +177,10 @@ if (Astro.request.method === "POST") {
               name="private_key"
               placeholder="SSH Private Key"
               class="textarea textarea-bordered w-full rounded-none"
-              required
+              x-bind:required="typeSelected === 'git'"
               :value="JSON.parse(selectedPlaybook)?.private_key"></textarea>
           </div>
+
           <div class="flex flex-col gap-2">
             <label for="main_file">Main File</label>
             <input
@@ -137,66 +189,103 @@ if (Astro.request.method === "POST") {
               name="main_file"
               placeholder="Main File Path e.g. playbooks/my_playbook.yml"
               class="input input-bordered w-full rounded-none"
-              required
+              x-bind:required="typeSelected === 'git'"
               :value="JSON.parse(selectedPlaybook)?.main_file"
             />
           </div>
         </div>
-        
-      </template>
+      </div>
+
       <div class="flex gap-4">
         <button
           class="btn btn-neutral btn-outline flex-1 rounded-none"
           type="reset"
-          @click="resetForm()">Cancel</button
+          @click="(u => { u.searchParams.delete('id'); location.href = u.toString(); })(new URL(location.href))"
         >
-        <button class="btn btn-primary flex-1 rounded-none" type="submit"
-          >Save</button
-        >
+          Cancel
+        </button>
+        <button class="btn btn-primary flex-1 rounded-none" type="submit">
+          Save
+        </button>
       </div>
     </form>
   </div>
 </dialog>
-<script
-  is:inline
-  src="https://cdn.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js"></script>
+
 <script is:inline>
-  function PlaybooksForm() {
-    return {
-      typeSelected: "",
-      yaml: "",
-      jsonOutput: "",
-      error: "",
-      parseYaml() {
-        try {
-          const obj = jsyaml.load(this.yaml);
-          this.jsonOutput = JSON.stringify(obj, null, 2);
-          this.error = "";
-        } catch (e) {
-          this.jsonOutput = "";
-          this.error = "⚠️ " + e.message;
+  const script = document.createElement("script");
+  script.src =
+    "https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/loader.min.js";
+  script.onload = () => {
+    require.config({
+      paths: {
+        vs: "https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs",
+      },
+    });
+    require(["vs/editor/editor.main"], function () {
+      const editor = monaco.editor.create(document.getElementById("editor"), {
+        value: "",
+        language: "json",
+        theme: "vs-dark",
+        automaticLayout: true,
+        minimap: { enabled: true },
+        fontSize: 14,
+        tabSize: 2,
+        wordWrap: "on",
+      });
+
+      window.addEventListener("custom-url-change", async () => {
+        const url = new URLSearchParams(window.location.search);
+        const id = url.get("id");
+
+        if (id) {
+          try {
+            const res = await fetch(`${form.action}?id=${id}`);
+            const playbookData = await res.json();
+            editor.setValue(
+              playbookData.playbook || JSON.stringify(playbookData, null, 2),
+            );
+            history.replaceState(null, "", playbookData.redirect);
+          } catch (error) {
+            console.error(`Failed to fetch reason ${error}`);
+          }
         }
-      },
-      insertTab(e) {
-        const textarea = e.target;
-        const start = textarea.selectionStart;
-        const end = textarea.selectionEnd;
+      });
 
-        const tab = "  ";
+      const form = document.querySelector("#playbooks_create_or_update form");
 
-        this.yaml =
-          this.yaml.substring(0, start) + tab + this.yaml.substring(end);
-        this.$nextTick(() => {
-          textarea.selectionStart = textarea.selectionEnd = start + tab.length;
-        });
-      },
-      resetForm() {
-        this.yaml = "";
-        this.jsonOutput = "";
-        this.error = "";
-        this.typeSelected = "";
-        document.getElementById("playbooks_create_or_update").close();
-      },
-    };
-  }
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        window.formUtils.clearErrors(form);
+        const formData = new FormData(form);
+        const type = formData.get("type");
+        if (type === "static") {
+          formData.set("yaml", editor.getValue());
+        } else {
+          formData.delete("yaml");
+        }
+        try {
+          const res = await fetch(form.action, {
+            method: "POST",
+            body: formData,
+          });
+          const result = await res.json();
+          if (!res.ok) {
+            if (result.errors) {
+              for (const [field, msg] of Object.entries(result.errors)) {
+                window.formUtils.showError(form, field, msg);
+              }
+            } else {
+              alert("Terjadi kesalahan");
+            }
+          } else if (result.success) {
+            window.location.href = result.redirect;
+          }
+        } catch (error) {
+          alert("Error jaringan, coba lagi");
+        }
+      });
+    });
+  };
+  document.head.appendChild(script);
 </script>

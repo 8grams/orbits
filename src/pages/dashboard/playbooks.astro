@@ -5,19 +5,24 @@ import { openDB } from "../../utils/db";
 import { Icons } from "../../utils/icons";
 import PlaybooksDelete from "./playbooks-delete.astro";
 
-const db = await openDB()
+const db = await openDB();
 
-const search = Astro.url.searchParams.get("search") || ""
-const type = Astro.url.searchParams.get("type") || "all"
+const search = Astro.url.searchParams.get("search") || "";
+const type = Astro.url.searchParams.get("type") || "all";
 
-const playbooks = await db.all(`
+const playbooks = await db.all(
+  `
   SELECT * FROM playbooks
   WHERE name LIKE ? AND type LIKE ?
-`, [`%${search}%`, type === "all" ? "%" : type])
-
+`,
+  [`%${search}%`, type === "all" ? "%" : type],
+);
 ---
+
 <Dashboard pageTitle="Playbooks">
-  <section slot="content" class="card bg-white w-full rounded-none py-12 px-12 shadow-sm flex flex-col gap-8"
+  <section
+    slot="content"
+    class="card bg-white w-full rounded-none py-12 px-12 shadow-sm flex flex-col gap-8"
     x-data="{ selectedPlaybookId: null, selectedPlaybook: null }"
   >
     <div class="flex justify-between items-center gap-4 flex-wrap">
@@ -109,27 +114,50 @@ const playbooks = await db.all(`
               <th class="text-black">No.</th>
               <th class="text-black">Name</th>
               <th class="text-black">Type</th>
-              <th class="text-black">URI</th>
-              <th class="text-black" x-show="$store.role.permissions.projects.includes('delete') && $store.role.permissions.projects.includes('edit')" x-cloak>&nbsp;</th>
+              <th class="text-black">URI / YAML</th>
+              <th
+                class="text-black"
+                x-show="$store.role.permissions.projects.includes('delete') && $store.role.permissions.projects.includes('edit')"
+                x-cloak>&nbsp;</th
+              >
             </tr>
           </thead>
           <tbody>
-          {playbooks.map((playbook: any, idx: number) => (
-            <tr>
-              <td>{idx + 1}.</td>
-              <td>{playbook.name}</td>
-              <td class="capitalize">{playbook.type}</td>
-              <td>{playbook.main_file}</td>
-              <td class="flex items-center gap-4">
-                <a x-cloak x-show="$store.role.permissions.projects.includes('delete')" href="#" data-playbookId={playbook.id} x-on:click.prevent="selectedPlaybookId = $el.dataset.playbookid; document.getElementById('playbooks_delete').showModal();">
-                  <Icons.trash/>
-                </a>
-                <a x-cloak x-show="$store.role.permissions.projects.includes('edit')" href="#" data-playbookId={playbook.id} data-playbook={JSON.stringify(playbook)} x-on:click.prevent="selectedPlaybookId = $el.dataset.playbookid; selectedPlaybook = $el.dataset.playbook; document.getElementById('playbooks_create_or_update').showModal();">
-                  <Icons.edit/>
-                </a>
-              </td>
-            </tr>
-          ))}
+            {
+              playbooks.map((playbook: any, idx: number) => (
+                <tr>
+                  <td>{idx + 1}.</td>
+                  <td>{playbook.name}</td>
+                  <td class="capitalize">{playbook.type}</td>
+                  <td class="max-w-[180px] truncate text-ellipsis overflow-hidden">
+                    {playbook.main_file
+                      ? playbook.main_file
+                      : playbook.playbook}
+                  </td>
+                  <td class="flex items-center gap-4">
+                    <a
+                      x-cloak
+                      x-show="$store.role.permissions.projects.includes('delete')"
+                      href="#"
+                      data-playbookId={playbook.id}
+                      x-on:click.prevent="selectedPlaybookId = $el.dataset.playbookid; document.getElementById('playbooks_delete').showModal();"
+                    >
+                      <Icons.trash />
+                    </a>
+                    <a
+                      x-cloak
+                      x-show="$store.role.permissions.projects.includes('edit')"
+                      href={`?id=${playbook.id}`}
+                      data-playbookId={playbook.id}
+                      data-playbook={JSON.stringify(playbook)}
+                      x-on:click.prevent="selectedPlaybookId = $el.dataset.playbookid; selectedPlaybook = $el.dataset.playbook; document.getElementById('playbooks_create_or_update').showModal(); history.pushState(null, '', '?id=' + $el.dataset.playbookid); window.dispatchEvent(new Event('custom-url-change'));"
+                    >
+                      <Icons.edit />
+                    </a>
+                  </td>
+                </tr>
+              ))
+            }
           </tbody>
         </table>
       </div>
