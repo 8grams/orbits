@@ -1,5 +1,6 @@
 ---
 import { openDB } from "../../utils/db";
+import formValidate from "../../utils/formValidation";
 
 const { user } = Astro.locals;
 const db = await openDB();
@@ -35,7 +36,36 @@ if (Astro.request.method === "POST") {
   } else {
     console.warn("validuntil is missing or not a string");
   }
-  console.log(id);
+
+  const errors: Record<string, string> = {};
+
+  if (formValidate.notEmpty(name)) errors.name = "Nama tidak boleh kosong";
+
+  if (formValidate.notEmpty(project))
+    errors.project = "Project tidak boleh kosong";
+
+  if (formValidate.notEmpty(type)) errors.type = "Tipe tidak boleh kosong";
+
+  if (type === "one_time") {
+    if (formValidate.notEmpty(periodically))
+      errors.periodically = "Choose time tidak boleh kosong";
+  }
+
+  if (type === "periodically") {
+    if (formValidate.notEmpty(cronsyntax))
+      errors.cronsyntax = "Cron Syntax tidak boleh kosong";
+
+    if (formValidate.notEmpty(validuntil))
+      errors.validuntil = "Valid Until tidak boleh kosong";
+  }
+
+  if (Object.keys(errors).length > 0) {
+    return new Response(JSON.stringify({ success: false, errors }), {
+      status: 400,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
   if (id) {
     await db.run(
       `UPDATE jobs SET name = ?, project_id = ?, type = ?, cron_syntax = ?, choose_time = ?, valid_until = ?, status = ? WHERE id = ?`,
@@ -56,7 +86,16 @@ if (Astro.request.method === "POST") {
       ],
     );
   }
-  return Astro.redirect("/dashboard/jobs");
+  return new Response(
+    JSON.stringify({
+      success: true,
+      redirect: "/dashboard/jobs",
+    }),
+    {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    },
+  );
 }
 ---
 
@@ -102,10 +141,7 @@ if (Astro.request.method === "POST") {
       method="POST"
       action="/dashboard/jobs-form"
     >
-      <h2
-        class="card-title"
-        x-text="selectedJobId ? 'Update Job' : 'New Job'"
-      >
+      <h2 class="card-title" x-text="selectedJobId ? 'Update Job' : 'New Job'">
       </h2>
       <input type="hidden" name="id" :value="JSON.parse(selectedJob)?.id" />
       <div class="flex flex-col gap-2">
@@ -152,9 +188,9 @@ if (Astro.request.method === "POST") {
           <option value="periodically">Periodically</option>
         </select>
       </div>
-      <template x-if="selectedType === 'periodically'">
+      <template x-if="selectedType === 'one_time'">
         <div class="flex flex-col gap-2">
-          <label for="periodically">Periodically</label>
+          <label for="periodically">Choose Time</label>
           <div>
             <button
               type="button"
@@ -181,7 +217,7 @@ if (Astro.request.method === "POST") {
               <calendar-date
                 class="cally"
                 name="periodically"
-                @change="selectedDate = $event.target.value; displayText = $event.target.value; $nextTick(() => $el.closest('[x-data]').querySelector('[popover]').hidePopover())"
+                @change="selectedPeriodically = $event.target.value; periodicallyText = $event.target.value; $nextTick(() => $el.closest('[x-data]').querySelector('[popover]').hidePopover())"
               >
                 <svg
                   aria-label="Previous"
@@ -205,69 +241,73 @@ if (Astro.request.method === "POST") {
           </div>
         </div>
       </template>
-      <div class="flex flex-col gap-2">
-        <label for="cronsyntax">Cron Syntax</label>
-        <input
-          id="cronsyntax"
-          type="text"
-          name="cronsyntax"
-          placeholder="Cron Syntax"
-          class="input input-bordered w-full rounded-none"
-          required
-          :value="JSON.parse(selectedJob)?.cron_syntax"
-        />
-      </div>
-      <div class="flex flex-col gap-2">
-        <label for="validuntil">Valid Until</label>
-        <div>
-          <button
-            type="button"
-            popovertarget="cally-popover-validuntil"
-            class="input input-border w-full rounded-none"
-            id="cally-validuntil"
-            style="anchor-name:--cally1"
-            x-text="expiredAtText"
-          >
-            Expired At
-          </button>
-          <input
-            type="hidden"
-            name="validuntil"
-            id="validuntil"
-            x-model="selectedExpiredAt"
-          />
-          <div
-            popover
-            id="cally-popover-validuntil"
-            class="dropdown bg-base-100 rounded-box shadow-lg"
-            style="position-anchor:--cally1"
-          >
-            <calendar-date
-              class="cally"
-              name="validuntil"
-              @change="selectedDate = $event.target.value; displayText = $event.target.value; $nextTick(() => $el.closest('[x-data]').querySelector('[popover]').hidePopover())"
-            >
-              <svg
-                aria-label="Previous"
-                class="fill-current size-4"
-                slot="previous"
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                ><path d="M15.75 19.5 8.25 12l7.5-7.5"></path></svg
+      <template x-if="selectedType === 'periodically'">
+        <div class="flex flex-col gap-6">
+          <div class="flex flex-col gap-2">
+            <label for="cronsyntax">Cron Syntax</label>
+            <input
+              id="cronsyntax"
+              type="text"
+              name="cronsyntax"
+              placeholder="Cron Syntax"
+              class="input input-bordered w-full rounded-none"
+              required
+              :value="JSON.parse(selectedJob)?.cron_syntax"
+            />
+          </div>
+          <div class="flex flex-col gap-2">
+            <label for="validuntil">Valid Until</label>
+            <div>
+              <button
+                type="button"
+                popovertarget="cally-popover-validuntil"
+                class="input input-border w-full rounded-none"
+                id="cally-validuntil"
+                style="anchor-name:--cally1"
+                x-text="expiredAtText"
               >
-              <svg
-                aria-label="Next"
-                class="fill-current size-4"
-                slot="next"
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                ><path d="m8.25 4.5 7.5 7.5-7.5 7.5"></path></svg
+                Expired At
+              </button>
+              <input
+                type="hidden"
+                name="validuntil"
+                id="validuntil"
+                x-model="selectedExpiredAt"
+              />
+              <div
+                popover
+                id="cally-popover-validuntil"
+                class="dropdown bg-base-100 rounded-box shadow-lg"
+                style="position-anchor:--cally1"
               >
-              <calendar-month></calendar-month>
-            </calendar-date>
+                <calendar-date
+                  class="cally"
+                  name="validuntil"
+                  @change="selectedExpiredAt = $event.target.value; expiredAtText = $event.target.value; $nextTick(() => $el.closest('[x-data]').querySelector('[popover]').hidePopover())"
+                >
+                  <svg
+                    aria-label="Previous"
+                    class="fill-current size-4"
+                    slot="previous"
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    ><path d="M15.75 19.5 8.25 12l7.5-7.5"></path></svg
+                  >
+                  <svg
+                    aria-label="Next"
+                    class="fill-current size-4"
+                    slot="next"
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    ><path d="m8.25 4.5 7.5 7.5-7.5 7.5"></path></svg
+                  >
+                  <calendar-month></calendar-month>
+                </calendar-date>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
+      </template>
       <div class="flex gap-4">
         <button
           class="btn btn-neutral btn-outline flex-1 rounded-none"
@@ -282,3 +322,31 @@ if (Astro.request.method === "POST") {
   </div>
 </dialog>
 <script type="module" src="https://unpkg.com/cally"></script>
+<script is:inline>
+  const form = document.querySelector("#jobs_create_or_update_modal form");
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const data = new FormData(form);
+    try {
+      const res = await fetch(form.action, {
+        method: "POST",
+        body: data,
+      });
+      const result = await res.json();
+      if (!res.ok) {
+        if (result.errors) {
+          for (const [field, msg] of Object.entries(result.errors)) {
+            window.formUtils.showError(form, field, msg);
+          }
+        } else {
+          alert("Terjadi kesalahan");
+        }
+      } else if (result.success) {
+        window.location.href = result.redirect;
+      }
+    } catch (error) {
+      alert("Error jaringan, coba lagi");
+    }
+  });
+</script>

@@ -6,7 +6,7 @@ export async function up(db) {
       project_id INTEGER NOT NULL,
       name TEXT NOT NULL,
       type TEXT NOT NULL,
-      cron_syntax TEXT NOT NULL,
+      cron_syntax TEXT,
       choose_time DATETIME,
       valid_until DATETIME,
       status TEXT,

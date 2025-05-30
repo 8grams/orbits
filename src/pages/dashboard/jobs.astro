@@ -1,14 +1,14 @@
 ---
-import Dashboard from "../../layouts/Dashboard.astro"
-import { openDB } from "../../utils/db"
+import Dashboard from "../../layouts/Dashboard.astro";
+import { openDB } from "../../utils/db";
 import { Icons } from "../../utils/icons";
-import JobsCreateOrUpdateModal from "./jobs-form.astro"
-import JobsDelete from "./jobs-delete.astro"
+import JobsCreateOrUpdateModal from "./jobs-form.astro";
+import JobsDelete from "./jobs-delete.astro";
 
-const db = await openDB()
+const db = await openDB();
 
-const search = Astro.url.searchParams.get("search") || ""
-const status = Astro.url.searchParams.get("status") || "all"
+const search = Astro.url.searchParams.get("search") || "";
+const status = Astro.url.searchParams.get("status") || "all";
 
 const jobs = await db.all(
   `SELECT
@@ -17,12 +17,16 @@ const jobs = await db.all(
           LEFT JOIN projects p ON j.project_id = p.id
    WHERE j.name LIKE ?
      AND j.status LIKE ?`,
-  [`%${search}%`, status === "all" ? "%" : status]
+  [`%${search}%`, status === "all" ? "%" : status],
 );
-
 ---
+
 <Dashboard pageTitle="Jobs">
-  <section slot="content" class="card bg-white w-full rounded-none py-12 px-12 shadow-sm flex flex-col gap-8" x-data="{selectedJobId: null, selectedJob: null}">
+  <section
+    slot="content"
+    class="card bg-white w-full rounded-none py-12 px-12 shadow-sm flex flex-col gap-8"
+    x-data="{selectedJobId: null, selectedJob: null}"
+  >
     <div class="flex justify-between items-center gap-4 flex-wrap">
       <h2 class="text-xl font-semibold">Jobs</h2>
       <div class="flex items-center gap-4">
@@ -113,45 +117,55 @@ const jobs = await db.all(
               <th class="text-black">Project</th>
               <th class="text-black">Type</th>
               <th class="text-black">Status</th>
-              <th class="text-black" x-show="$store.role.permissions.jobs.includes('delete') && $store.role.permissions.jobs.includes('edit')" x-cloak>Action</th>
+              <th
+                class="text-black"
+                x-show="$store.role.permissions.jobs.includes('delete') && $store.role.permissions.jobs.includes('edit')"
+                x-cloak>Action</th
+              >
             </tr>
           </thead>
           <tbody>
-          {jobs.map((job: any, idx: number) => (
-            <tr>
-              <td>{idx + 1}</td>
-              <td>{job.name}</td>
-              <td>{job.type}</td>
-              <td>
-                {job.status === 'active' ? (
-                  <div class={`badge badge-soft badge-success capitalize`}>{job.status}</div>
-                ) : (
-                  <div class={`badge badge-soft badge-danger capitalize`}>{job.status}</div>
-                )}
-              </td>
-              <td class="flex items-center gap-4">
-                <a
-                  href="#"
-                  x-cloak
-                  x-show="$store.role.permissions.jobs.includes('delete')"
-                  data-jobId={job.id}
-                  x-on:click.prevent="selectedJobId = $el.dataset.jobid; document.getElementById('jobs_delete').showModal();"
-                >
-                  <Icons.trash />
-                </a>
-                <a
-                  href="#"
-                  x-cloak
-                  x-show="$store.role.permissions.jobs.includes('edit')"
-                  data-jobId={job.id}
-                  data-job={JSON.stringify(job)}
-                  x-on:click.prevent="selectedJobId = $el.dataset.jobid; selectedJob = $el.dataset.job; document.getElementById('jobs_create_or_update_modal').showModal();"
-                >
-                  <Icons.edit />
-                </a>
-              </td>
-            </tr>
-          ))}
+            {
+              jobs.map((job: any, idx: number) => (
+                <tr>
+                  <td>{idx + 1}</td>
+                  <td>{job.name}</td>
+                  <td class="capitalize">{job.type.replace("_", " ")}</td>
+                  <td>
+                    {job.status === "active" ? (
+                      <div class={`badge badge-soft badge-success capitalize`}>
+                        {job.status}
+                      </div>
+                    ) : (
+                      <div class={`badge badge-soft badge-danger capitalize`}>
+                        {job.status}
+                      </div>
+                    )}
+                  </td>
+                  <td class="flex items-center gap-4">
+                    <a
+                      href="#"
+                      x-cloak
+                      x-show="$store.role.permissions.jobs.includes('delete')"
+                      data-jobId={job.id}
+                      x-on:click.prevent="selectedJobId = $el.dataset.jobid; document.getElementById('jobs_delete').showModal();"
+                    >
+                      <Icons.trash />
+                    </a>
+                    <a
+                      href="#"
+                      x-cloak
+                      x-show="$store.role.permissions.jobs.includes('edit')"
+                      data-jobId={job.id}
+                      data-job={JSON.stringify(job)}
+                      x-on:click.prevent="selectedJobId = $el.dataset.jobid; selectedJob = $el.dataset.job; document.getElementById('jobs_create_or_update_modal').showModal();"
+                    >
+                      <Icons.edit />
+                    </a>
+                  </td>
+                </tr>
+              ))
+            }
           </tbody>
         </table>
       </div>
@@ -168,4 +182,3 @@ const jobs = await db.all(
     window.location.search = params.toString();
   }
 </script>
-
