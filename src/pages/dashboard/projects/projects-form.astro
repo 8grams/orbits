@@ -1,6 +1,7 @@
 ---
 import { openDB } from "../../../utils/db";
 import { Icons } from "../../../utils/icons";
+import formValidate from "../../../utils/formValidation";
 
 const { user } = Astro.locals;
 const db = await openDB();
@@ -53,6 +54,111 @@ if (Astro.request.method === "POST") {
     value: formData.getAll("parameter_value[]")[index],
   }));
   const inventoryHosts = formData.getAll("inventory_hosts");
+
+  const errors: Record<string, string> = {};
+
+  if (formValidate.notEmpty(name)) errors.name = "Nama tidak boleh kosong";
+
+  if (formValidate.notEmpty(playbookId))
+    errors.playbooks = "Playbook tidak boleh kosong";
+
+  if (formValidate.notEmpty(inventoryId))
+    errors.inventories = "Inventory tidak boleh kosong";
+
+  if (formData.getAll("ip_address[]").length > 0) {
+    if (
+      formValidate.isIpAddress(
+        formData.getAll("ip_address[]"),
+        (elements: string[], rgx: RegExp) =>
+          elements.filter((ip) => ip.trim() !== "" && !rgx.test(ip.trim())),
+      )
+    )
+      errors["ip_address[]"] = "IP Address tidak valid";
+  }
+
+  if (formData.getAll("description[]")) {
+    if (
+      formValidate.customValidation(
+        formData.getAll("description[]"),
+        (elements: string[]) => elements.filter((el) => el.trim() === ""),
+      )
+    ) {
+      errors["description[]"] = "Deskripsi tidak boleh kosong";
+    }
+  }
+
+  if (formData.getAll("variable_key[]").length > 0) {
+    if (
+      formValidate.customValidation(
+        formData.getAll("variable_key[]"),
+        (elements: string[]) => elements.filter((el) => el.trim() === ""),
+      )
+    ) {
+      errors["variable_key[]"] = "Key tidak boleh kosong";
+    }
+  }
+
+  if (formData.getAll("variable_value[]").length > 0) {
+    if (
+      formValidate.customValidation(
+        formData.getAll("variable_value[]"),
+        (elements: string[]) => elements.filter((el) => el.trim() === ""),
+      )
+    ) {
+      errors["variable_value[]"] = "Value tidak boleh kosong";
+    }
+  }
+
+  if (formData.getAll("secret_key[]").length > 0) {
+    if (
+      formValidate.customValidation(
+        formData.getAll("secret_key[]"),
+        (elements: string[]) => elements.filter((el) => el.trim() === ""),
+      )
+    ) {
+      errors["secret_key[]"] = "Key tidak boleh kosong";
+    }
+  }
+
+  if (formData.getAll("secret_value[]").length > 0) {
+    if (
+      formValidate.customValidation(
+        formData.getAll("secret_value[]"),
+        (elements: string[]) => elements.filter((el) => el.trim() === ""),
+      )
+    ) {
+      errors["secret_value[]"] = "Value tidak boleh kosong";
+    }
+  }
+
+  if (formData.getAll("parameter_key[]").length > 0) {
+    if (
+      formValidate.customValidation(
+        formData.getAll("parameter_key[]"),
+        (elements: string[]) => elements.filter((el) => el.trim() === ""),
+      )
+    ) {
+      errors["parameter_key[]"] = "Key tidak boleh kosong";
+    }
+  }
+
+  if (formData.getAll("parameter_value[]").length > 0) {
+    if (
+      formValidate.customValidation(
+        formData.getAll("parameter_value[]"),
+        (elements: string[]) => elements.filter((el) => el.trim() === ""),
+      )
+    ) {
+      errors["parameter_value[]"] = "Value tidak boleh kosong";
+    }
+  }
+
+  if (Object.keys(errors).length > 0) {
+    return new Response(JSON.stringify({ success: false, errors }), {
+      status: 400,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
 
   const metaData = [
     ...additionalHosts.map(({ ip_address, description }) => ({
@@ -120,9 +226,16 @@ if (Astro.request.method === "POST") {
     }
   }
 
-
-
-  return Astro.redirect("/dashboard/projects");
+  return new Response(
+    JSON.stringify({
+      success: true,
+      redirect: "/dashboard/projects",
+    }),
+    {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    },
+  );
 }
 ---
 
@@ -206,14 +319,20 @@ if (Astro.request.method === "POST") {
             modal.close();
           }
         }
-      }" x-effect="syncProject()"
+      }"
+      x-effect="syncProject()"
       action="/dashboard/projects/projects-form"
     >
-      <input type="hidden" name="id" :value="JSON.parse(selectedProject)?.project_id" />
+      <input
+        type="hidden"
+        name="id"
+        :value="JSON.parse(selectedProject)?.project_id"
+      />
       <h2
         class="card-title"
         x-text="JSON.parse(selectedProject)?.project_id ? 'Update Project' : 'Create Project'"
-      ></h2>
+      >
+      </h2>
       <div class="flex flex-col gap-2">
         <label for="name">Name</label>
         <input
@@ -250,7 +369,12 @@ if (Astro.request.method === "POST") {
           name="inventories"
           id="inventories"
           required
-          @change="inventory = $event.target.value"
+          data-inventories={JSON.stringify(
+            inventoriesWithHosts.flatMap((inventory: Record<string, any>) =>
+              inventory.hosts.map((host: any) => String(host.id)),
+            ),
+          )}
+          @change="inventory = $event.target.value; selectedHosts = JSON.parse($el.dataset.inventories)"
           :value="JSON.parse(selectedProject)?.inventory_id"
         >
           <option value="" disabled selected>Choose Inventories</option>
@@ -292,6 +416,10 @@ if (Astro.request.method === "POST") {
           <label for="hosts" class="flex items-center">Additional Hosts</label>
           <Icons.add class="w-5 h-5 cursor-pointer" @click="addHost()" />
         </div>
+        <div class="flex flex-row items-center gap-4">
+          <div id="errors_ip_address" class="text-sm text-red-600"></div>
+          <div id="errors_description" class="text-sm text-red-600"></div>
+        </div>
         <template x-for="(host, index) in additional_hosts" :key="index">
           <div class="flex flex-row gap-2 items-end">
             <div class="flex flex-col gap-2">
@@ -329,6 +457,10 @@ if (Astro.request.method === "POST") {
         <div class="flex items-center gap-2">
           <label for="hosts" class="flex items-center">Variables</label>
           <Icons.add class="w-5 h-5 cursor-pointer" @click="addVariables()" />
+        </div>
+        <div class="flex flex-row items-center gap-4">
+          <div id="errors_variable_key" class="text-sm text-red-600"></div>
+          <div id="errors_variable_value" class="text-sm text-red-600"></div>
         </div>
         <template x-for="(variable, index) in variables" :key="index">
           <div class="flex flex-row gap-2 items-end">
@@ -368,6 +500,10 @@ if (Astro.request.method === "POST") {
           <label for="hosts" class="flex items-center">Secrets</label>
           <Icons.add class="w-5 h-5 cursor-pointer" @click="addSecrets()" />
         </div>
+        <div class="flex flex-row items-center gap-4">
+          <div id="errors_secret_key" class="text-sm text-red-600"></div>
+          <div id="errors_secret_value" class="text-sm text-red-600"></div>
+        </div>
         <template x-for="(secret, index) in secrets" :key="index">
           <div class="flex flex-row gap-2 items-end">
             <div class="flex flex-col gap-2">
@@ -406,6 +542,8 @@ if (Astro.request.method === "POST") {
           <label for="hosts" class="flex items-center">Parameters</label>
           <Icons.add class="w-5 h-5 cursor-pointer" @click="addParameters()" />
         </div>
+        <div id="errors_parameter_key" class="text-sm text-red-600"></div>
+        <div id="errors_parameter_value" class="text-sm text-red-600"></div>
         <template x-for="(pars, index) in parameters" :key="index">
           <div class="flex flex-row gap-2 items-end">
             <div class="flex flex-col gap-2">
@@ -440,9 +578,48 @@ if (Astro.request.method === "POST") {
         </template>
       </div>
       <div class="flex gap-4">
-        <button class="btn btn-neutral btn-outline flex-1 rounded-none" type="reset" @click="resetForm()">Cancel</button>
-        <button class="btn btn-primary flex-1 rounded-none" type="submit">Save</button>
+        <button
+          class="btn btn-neutral btn-outline flex-1 rounded-none"
+          type="reset"
+          @click="resetForm()">Cancel</button
+        >
+        <button class="btn btn-primary flex-1 rounded-none" type="submit"
+          >Save</button
+        >
       </div>
     </form>
   </div>
 </dialog>
+<script is:inline>
+  const form = document.querySelector("#projects_create_or_update form");
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    window.formUtils.clearErrors(form);
+
+    const data = new FormData(form);
+
+    try {
+      const res = await fetch(form.action, {
+        method: "POST",
+        body: data,
+      });
+
+      const result = await res.json();
+
+      if (!res.ok) {
+        if (result.errors) {
+          for (const [field, msg] of Object.entries(result.errors)) {
+            window.formUtils.showError(form, field, msg);
+          }
+        } else {
+          alert("Terjadi kesalahan");
+        }
+      } else if (result.success) {
+        window.location.href = result.redirect;
+      }
+    } catch (error) {
+      alert("Error jaringan, coba lagi");
+    }
+  });
+</script>
