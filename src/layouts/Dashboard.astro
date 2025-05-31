@@ -11,82 +11,48 @@ const permissions = canPerformAction(user?.role);
 ---
 
 <Layout pageTitle={pageTitle}>
-  <nav class="w-full bg-white shadow-md">
+  <nav
+    class="w-full bg-white shadow-md"
+    x-data="{ open: false, current: window.location.pathname }"
+  >
     <div class="flex justify-between items-center px-6 py-6">
-      <ul
-        class="flex items-center gap-6"
-        x-data="{ current: window.location.pathname }"
-      >
-        <li>
-          <a
-            :class="current === '/dashboard/inventories' ? 'underline underline-offset-12 font-bold text-sky-500' : 'text-gray-500'"
-            class="flex items-center gap-2"
-            href="/dashboard/inventories"
-          >
-            <Icons.inventory
-              :class="current === '/dashboard/inventories' ? 'text-sky-500' : 'text-gray-500'"
-              class="w-5 h-5"
-            />
-            Inventories
-          </a>
-        </li>
-        <li>
-          <a
-            :class="current === '/dashboard/playbooks' ? 'underline underline-offset-12 font-bold text-sky-500' : 'text-gray-500'"
-            class="flex items-center gap-2"
-            href="/dashboard/playbooks"
-          >
-            <Icons.playbook
-              :class="current === '/dashboard/playbooks' ? 'text-sky-500' : 'text-gray-500'"
-              class="w-4 h-4"
-            />
-            Playbooks
-          </a>
-        </li>
-        <li>
-          <a
-            :class="current.includes('/dashboard/projects') ? 'underline underline-offset-12 font-bold text-sky-500' : 'text-gray-500'"
-            class="flex items-center gap-2"
-            href="/dashboard/projects"
-          >
-            <Icons.projects
-              :class="current.includes('/dashboard/projects') ? 'text-sky-500' : 'text-gray-500'"
-              class="w-4 h-4"
-            />
-            Projects
-          </a>
-        </li>
-        <li>
-          <a
-            :class="current === '/dashboard/jobs' ? 'underline underline-offset-12 font-bold text-sky-500' : 'text-gray-500'"
-            class="flex items-center gap-2"
-            href="/dashboard/jobs"
-          >
-            <Icons.rocket
-              :class="current === '/dashboard/jobs' ? 'text-sky-500' : 'text-gray-500'"
-              class="w-5 h-5"
-            />
-            Jobs
-          </a>
-        </li>
-        <li>
-          <a
-            :class="current === '/dashboard/users' ? 'underline underline-offset-12 font-bold text-sky-500' : 'text-gray-500'"
-            class="flex items-center gap-2"
-            href="/dashboard/users"
-          >
-            <Icons.users
-              :class="current === '/dashboard/users' ? 'text-sky-500' : 'text-gray-500'"
-              class="w-5 h-5"
-            />
-            Users
-          </a>
-        </li>
-      </ul>
-      <div class="relative" x-data="{ open: false }">
+      <div class="text-xl font-bold text-sky-500">
+        <a href="/dashboard">Dashboard</a>
+      </div>
+      <button @click="open = !open" class="md:hidden" x-cloak>
+        <svg
+          x-show="!open"
+          class="w-6 h-6 text-gray-700"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M4 6h16M4 12h16M4 18h16"></path>
+        </svg>
+        <svg
+          x-show="open"
+          class="w-6 h-6 text-gray-700"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
+      </button>
+      <div class="relative hidden md:block" x-data="{ userOpen: false }">
         <button
           class="btn btn-ghost flex items-center gap-2"
-          @click="open = !open"
+          @click="userOpen = !userOpen"
         >
           {
             user?.avatar && (
@@ -103,7 +69,7 @@ const permissions = canPerformAction(user?.role);
           <span>{user?.name}</span>
           <svg
             class="ml-2 w-4 h-4 transition-transform"
-            :class="open ? 'rotate-180' : ''"
+            :class="userOpen ? 'rotate-180' : ''"
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
             viewBox="0 0 24 24"
@@ -118,20 +84,95 @@ const permissions = canPerformAction(user?.role);
         </button>
         <ul
           class="menu menu-md dropdown-content mt-3 p-2 shadow bg-base-100 rounded-box w-52 absolute right-0 z-50"
-          x-show="open"
+          x-show="userOpen"
           x-transition
-          @click.outside="open = false"
+          @click.outside="userOpen = false"
           x-cloak
         >
           <form method="POST" action="/logout">
-            <li>
-              <button type="submit">Logout</button>
-            </li>
+            <li><button type="submit">Logout</button></li>
           </form>
         </ul>
       </div>
     </div>
+    <ul
+      class="flex flex-col md:flex-row md:items-center gap-4 md:gap-6 px-6 pb-6 md:pb-6"
+      :class="open ? 'block' : 'hidden md:flex'"
+      x-cloak
+    >
+      <li>
+        <a
+          :class="current === '/dashboard/inventories' ? 'underline underline-offset-12 font-bold text-sky-500' : 'text-gray-500'"
+          class="flex items-center gap-2"
+          href="/dashboard/inventories"
+        >
+          <Icons.inventory
+            :class="current === '/dashboard/inventories' ? 'text-sky-500' : 'text-gray-500'"
+            class="w-5 h-5"
+          />
+          Inventories
+        </a>
+      </li>
+      <li>
+        <a
+          :class="current === '/dashboard/playbooks' ? 'underline underline-offset-12 font-bold text-sky-500' : 'text-gray-500'"
+          class="flex items-center gap-2"
+          href="/dashboard/playbooks"
+        >
+          <Icons.playbook
+            :class="current === '/dashboard/playbooks' ? 'text-sky-500' : 'text-gray-500'"
+            class="w-4 h-4"
+          />
+          Playbooks
+        </a>
+      </li>
+      <li>
+        <a
+          :class="current.includes('/dashboard/projects') ? 'underline underline-offset-12 font-bold text-sky-500' : 'text-gray-500'"
+          class="flex items-center gap-2"
+          href="/dashboard/projects"
+        >
+          <Icons.projects
+            :class="current.includes('/dashboard/projects') ? 'text-sky-500' : 'text-gray-500'"
+            class="w-4 h-4"
+          />
+          Projects
+        </a>
+      </li>
+      <li>
+        <a
+          :class="current === '/dashboard/jobs' ? 'underline underline-offset-12 font-bold text-sky-500' : 'text-gray-500'"
+          class="flex items-center gap-2"
+          href="/dashboard/jobs"
+        >
+          <Icons.rocket
+            :class="current === '/dashboard/jobs' ? 'text-sky-500' : 'text-gray-500'"
+            class="w-5 h-5"
+          />
+          Jobs
+        </a>
+      </li>
+      <li>
+        <a
+          :class="current === '/dashboard/users' ? 'underline underline-offset-12 font-bold text-sky-500' : 'text-gray-500'"
+          class="flex items-center gap-2"
+          href="/dashboard/users"
+        >
+          <Icons.users
+            :class="current === '/dashboard/users' ? 'text-sky-500' : 'text-gray-500'"
+            class="w-5 h-5"
+          />
+          Users
+        </a>
+      </li>
+      <li class="block md:hidden">
+        <form method="POST" action="/logout">
+          <button type="submit" class="btn btn-error btn-soft">Logout</button>
+        </form>
+      </li>
+    </ul>
   </nav>
+
   <main class="py-6 px-6 max-w-[1440px] mx-auto">
     <slot name="content" />
   </main>

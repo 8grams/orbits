@@ -1,14 +1,15 @@
 ---
 import Dashboard from "../../layouts/Dashboard.astro";
 import InventoriesCreateOrUpdateModal from "./inventories-form.astro";
-import { openDB } from "../../utils/db"
+import { openDB } from "../../utils/db";
 import { Icons } from "../../utils/icons";
 import InventoriesDelete from "./inventories-delete.astro";
 
 const db = await openDB();
 
-const search = Astro.url.searchParams.get("search") || ""
-const inventories = await db.all(`
+const search = Astro.url.searchParams.get("search") || "";
+const inventories = await db.all(
+  `
   SELECT
     inventories.*,
     COUNT(inventory_hosts.id) AS hosts_count
@@ -16,13 +17,17 @@ const inventories = await db.all(`
          LEFT JOIN inventory_hosts ON inventory_hosts.inventory_id = inventories.id
   WHERE inventories.name LIKE ?
   GROUP BY inventories.id
-`, [`%${search}%`]);
+`,
+  [`%${search}%`],
+);
 
-const hosts = await db.all(`
+const hosts = await db.all(
+  `
   SELECT * FROM inventory_hosts
-  WHERE inventory_id IN (${inventories.map(() => '?').join(',')})
-`, inventories.map((inv: any) => inv.id));
-
+  WHERE inventory_id IN (${inventories.map(() => "?").join(",")})
+`,
+  inventories.map((inv: any) => inv.id),
+);
 
 const inventoriesWithHosts = inventories.map((inv: any) => {
   return {
@@ -30,13 +35,19 @@ const inventoriesWithHosts = inventories.map((inv: any) => {
     hosts: hosts.filter((h: any) => h.inventory_id === inv.id),
   };
 });
-
 ---
+
 <Dashboard pageTitle="Inventories">
-  <section slot="content" class="card bg-white w-full rounded-none py-12 px-12 shadow-sm flex flex-col gap-8" x-data="{ selectedInventoryId: null, selectedInventory: null }">
-    <div class="flex justify-between items-center gap-4 flex-wrap">
+  <section
+    slot="content"
+    class="card bg-white w-full rounded-none py-12 px-12 shadow-sm flex flex-col gap-8"
+    x-data="{ selectedInventoryId: null, selectedInventory: null }"
+  >
+    <div
+      class="flex justify-between md:items-center gap-4 flex-wrap md:flex-row flex-col"
+    >
       <h2 class="text-xl font-semibold">Inventories</h2>
-      <div class="flex items-center gap-4">
+      <div class="flex md:items-center gap-4 md:flex-row flex-col">
         <div
           x-data="{
           search: new URLSearchParams(window.location.search).get('search') || '',
@@ -51,7 +62,7 @@ const inventoriesWithHosts = inventories.map((inv: any) => {
           }
   }"
         >
-          <label class="input rounded-none w-[220px]">
+          <label class="input rounded-none md:w-[220px] w-full">
             <svg
               class="h-[1em] opacity-50"
               xmlns="http://www.w3.org/2000/svg"
@@ -97,27 +108,44 @@ const inventoriesWithHosts = inventories.map((inv: any) => {
               <th class="text-black">No.</th>
               <th class="text-black">Name</th>
               <th class="text-black">Total Hosts</th>
-              <th class="text-black" x-show="$store.role.permissions.inventories?.includes('edit') && $store.role.permissions.inventories.includes('delete')">&nbsp;</th>
+              <th
+                class="text-black"
+                x-show="$store.role.permissions.inventories?.includes('edit') && $store.role.permissions.inventories.includes('delete')"
+                >&nbsp;</th
+              >
             </tr>
           </thead>
           <tbody>
-          {
-            inventoriesWithHosts.map((inventory: any, index: number) => (
-              <tr>
-                <td>{index + 1}.</td>
-                <td>{inventory.name}</td>
-                <td>{inventory.hosts_count}</td>
-                <td class="flex items-center gap-4">
-                  <a x-cloak x-show="$store.role.permissions.inventories?.includes('delete')" href="#" data-inventoryId={inventory.id} x-on:click.prevent="selectedInventoryId = $el.dataset.inventoryid; document.getElementById('inventories_delete').showModal();">
-                    <Icons.trash/>
-                  </a>
-                  <a x-cloak x-show="$store.role.permissions.inventories.includes('edit')" href="#" data-inventoryId={inventory.id} data-inventory={JSON.stringify(inventory)} x-on:click.prevent="selectedInventoryId = $el.dataset.inventoryid; selectedInventory = $el.dataset.inventory; document.getElementById('inventories_create_or_update_modal').showModal();">
-                    <Icons.edit/>
-                  </a>
-                </td>
-              </tr>
-            ))
-          }
+            {
+              inventoriesWithHosts.map((inventory: any, index: number) => (
+                <tr>
+                  <td>{index + 1}.</td>
+                  <td>{inventory.name}</td>
+                  <td>{inventory.hosts_count}</td>
+                  <td class="flex items-center gap-4">
+                    <a
+                      x-cloak
+                      x-show="$store.role.permissions.inventories?.includes('delete')"
+                      href="#"
+                      data-inventoryId={inventory.id}
+                      x-on:click.prevent="selectedInventoryId = $el.dataset.inventoryid; document.getElementById('inventories_delete').showModal();"
+                    >
+                      <Icons.trash />
+                    </a>
+                    <a
+                      x-cloak
+                      x-show="$store.role.permissions.inventories.includes('edit')"
+                      href="#"
+                      data-inventoryId={inventory.id}
+                      data-inventory={JSON.stringify(inventory)}
+                      x-on:click.prevent="selectedInventoryId = $el.dataset.inventoryid; selectedInventory = $el.dataset.inventory; document.getElementById('inventories_create_or_update_modal').showModal();"
+                    >
+                      <Icons.edit />
+                    </a>
+                  </td>
+                </tr>
+              ))
+            }
           </tbody>
         </table>
       </div>

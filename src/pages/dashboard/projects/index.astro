@@ -9,7 +9,8 @@ const db = await openDB();
 
 const search = Astro.url.searchParams.get("search") || "";
 
-const rows = await db.all(`
+const rows = await db.all(
+    `
   SELECT 
   p.id AS project_id,
   p.name AS project_name,
@@ -31,11 +32,9 @@ LEFT JOIN project_metadata pm ON p.id = pm.project_id
      OR i.name LIKE ?
      OR pb.name LIKE ?
 
-`, [
-    `%${search}%`,
-    `%${search}%`,
-    `%${search}%`
-]);
+`,
+    [`%${search}%`, `%${search}%`, `%${search}%`],
+);
 
 const groupedProjects = [];
 
@@ -54,7 +53,7 @@ for (const row of rows) {
         metadata_key,
         metadata_value,
         metadata_ip,
-        metadata_description
+        metadata_description,
     } = row;
 
     if (!projectMap.has(project_id)) {
@@ -65,7 +64,7 @@ for (const row of rows) {
             playbook_name,
             inventory_id,
             playbook_id,
-            children: []
+            children: [],
         };
         projectMap.set(project_id, newProject);
         groupedProjects.push(newProject);
@@ -78,20 +77,25 @@ for (const row of rows) {
             key: metadata_key,
             value: metadata_value,
             ip_address: metadata_ip,
-            description: metadata_description
+            description: metadata_description,
         });
     }
 }
 ---
+
 <Dashboard pageTitle="Projects">
-    <section slot="content" class="card bg-white w-full rounded-none py-12 px-12 shadow-sm flex flex-col gap-8"
-             x-data="{ selectedProjectId: null, selectedProject: null }"
+    <section
+        slot="content"
+        class="card bg-white w-full rounded-none py-12 px-12 shadow-sm flex flex-col gap-8"
+        x-data="{ selectedProjectId: null, selectedProject: null }"
     >
-        <div class="flex justify-between items-center gap-4 flex-wrap">
+        <div
+            class="flex justify-between md:items-center gap-4 flex-wrap md:flex-row flex-col"
+        >
             <h2 class="text-xl font-semibold">Projects</h2>
-            <div class="flex items-center gap-4">
+            <div class="flex md:items-center gap-4 md:flex-row flex-col">
                 <div
-                        x-data="{
+                    x-data="{
           search: new URLSearchParams(window.location.search).get('search') || '',
           updateSearch() {
             const params = new URLSearchParams(window.location.search);
@@ -104,18 +108,18 @@ for (const row of rows) {
           }
   }"
                 >
-                    <label class="input rounded-none w-[220px]">
+                    <label class="input rounded-none md:w-[220px] w-full">
                         <svg
-                                class="h-[1em] opacity-50"
-                                xmlns="http://www.w3.org/2000/svg"
-                                viewBox="0 0 24 24"
+                            class="h-[1em] opacity-50"
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 24 24"
                         >
                             <g
-                                    stroke-linejoin="round"
-                                    stroke-linecap="round"
-                                    stroke-width="2.5"
-                                    fill="none"
-                                    stroke="currentColor"
+                                stroke-linejoin="round"
+                                stroke-linecap="round"
+                                stroke-width="2.5"
+                                fill="none"
+                                stroke="currentColor"
                             >
                                 <circle cx="11" cy="11" r="8"></circle>
                                 <path d="m21 21-4.3-4.3"></path>
@@ -123,20 +127,20 @@ for (const row of rows) {
                         </svg>
 
                         <input
-                                type="search"
-                                class="grow"
-                                placeholder="Search"
-                                name="search"
-                                x-model="search"
-                                @keydown.enter.prevent="updateSearch"
+                            type="search"
+                            class="grow"
+                            placeholder="Search"
+                            name="search"
+                            x-model="search"
+                            @keydown.enter.prevent="updateSearch"
                         />
                     </label>
                 </div>
                 <button
-                        class="btn btn-primary rounded-none w-[140px]"
-                        x-on:click.prevent="selectedProjectId = null; selectedProject = null; document.getElementById('projects_create_or_update').showModal();"
-                        x-cloak
-                        x-show="$store.role.permissions.projects.includes('create')"
+                    class="btn btn-primary rounded-none w-[140px]"
+                    x-on:click.prevent="selectedProjectId = null; selectedProject = null; document.getElementById('projects_create_or_update').showModal();"
+                    x-cloak
+                    x-show="$store.role.permissions.projects.includes('create')"
                 >
                     Create
                 </button>
@@ -146,39 +150,65 @@ for (const row of rows) {
             <div>
                 <table class="table">
                     <thead>
-                    <tr>
-                        <th class="text-black">No.</th>
-                        <th class="text-black">Name</th>
-                        <th class="text-black">Inventories</th>
-                        <th class="text-black">Playbook</th>
-                        <th class="text-black" x-cloak x-show="$store.role.permissions.projects.includes('view')">&nbsp;</th>
-                    </tr>
+                        <tr>
+                            <th class="text-black">No.</th>
+                            <th class="text-black">Name</th>
+                            <th class="text-black">Inventories</th>
+                            <th class="text-black">Playbook</th>
+                            <th
+                                class="text-black"
+                                x-cloak
+                                x-show="$store.role.permissions.projects.includes('view')"
+                                >&nbsp;</th
+                            >
+                        </tr>
                     </thead>
                     <tbody>
-                    {groupedProjects.map((project: any, idx: number) => (
-                            <tr>
-                                <td>{idx + 1}.</td>
-                                <td>{project.project_name}</td>
-                                <td>{project.inventory_name}</td>
-                                <td>{project.playbook_name}</td>
-                                <td class="flex items-center gap-4">
-                                    <a x-cloak x-show="$store.role.permissions.projects.includes('delete')" href="#" data-projectId={project.project_id} x-on:click.prevent="selectedProjectId = $el.dataset.projectid; document.getElementById('projects_delete').showModal();">
-                                        <Icons.trash/>
-                                    </a>
-                                    <a x-cloak x-show="$store.role.permissions.projects.includes('delete')" href="#" data-projectid={project.project_id} data-project={JSON.stringify(project)} x-on:click.prevent="selectedProjectId = $el.dataset.projectid; selectedProject = $el.dataset.project; document.getElementById('projects_create_or_update').showModal();">
-                                        <Icons.edit/>
-                                    </a>
-                                  <a x-cloak x-show="$store.role.permissions.projects.includes('view')" href={`/dashboard/projects/${project.project_name}`}>
-                                    <Icons.view/>
-                                  </a>
-                                </td>
-                            </tr>
-                    ))}
+                        {
+                            groupedProjects.map((project: any, idx: number) => (
+                                <tr>
+                                    <td>{idx + 1}.</td>
+                                    <td>{project.project_name}</td>
+                                    <td>{project.inventory_name}</td>
+                                    <td>{project.playbook_name}</td>
+                                    <td class="flex items-center gap-4">
+                                        <a
+                                            x-cloak
+                                            x-show="$store.role.permissions.projects.includes('delete')"
+                                            href="#"
+                                            data-projectId={project.project_id}
+                                            x-on:click.prevent="selectedProjectId = $el.dataset.projectid; document.getElementById('projects_delete').showModal();"
+                                        >
+                                            <Icons.trash />
+                                        </a>
+                                        <a
+                                            x-cloak
+                                            x-show="$store.role.permissions.projects.includes('delete')"
+                                            href="#"
+                                            data-projectid={project.project_id}
+                                            data-project={JSON.stringify(
+                                                project,
+                                            )}
+                                            x-on:click.prevent="selectedProjectId = $el.dataset.projectid; selectedProject = $el.dataset.project; document.getElementById('projects_create_or_update').showModal();"
+                                        >
+                                            <Icons.edit />
+                                        </a>
+                                        <a
+                                            x-cloak
+                                            x-show="$store.role.permissions.projects.includes('view')"
+                                            href={`/dashboard/projects/${project.project_name}`}
+                                        >
+                                            <Icons.view />
+                                        </a>
+                                    </td>
+                                </tr>
+                            ))
+                        }
                     </tbody>
                 </table>
             </div>
         </div>
-        <ProjectsDelete/>
-        <ProjectsCreateOrUpdate/>
+        <ProjectsDelete />
+        <ProjectsCreateOrUpdate />
     </section>
 </Dashboard>

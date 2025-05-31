@@ -27,9 +27,11 @@ const jobs = await db.all(
     class="card bg-white w-full rounded-none py-12 px-12 shadow-sm flex flex-col gap-8"
     x-data="{selectedJobId: null, selectedJob: null}"
   >
-    <div class="flex justify-between items-center gap-4 flex-wrap">
+    <div
+      class="flex justify-between md:items-center gap-4 flex-wrap md:flex-row flex-col"
+    >
       <h2 class="text-xl font-semibold">Jobs</h2>
-      <div class="flex items-center gap-4">
+      <div class="flex md:items-center gap-4 md:flex-row flex-col">
         <div
           x-data="{
           search: new URLSearchParams(window.location.search).get('search') || '',
@@ -44,7 +46,7 @@ const jobs = await db.all(
           }
   }"
         >
-          <label class="input rounded-none w-[220px]">
+          <label class="input rounded-none md:w-[220px] w-full">
             <svg
               class="h-[1em] opacity-50"
               xmlns="http://www.w3.org/2000/svg"
