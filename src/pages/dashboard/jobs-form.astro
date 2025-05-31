@@ -189,56 +189,39 @@ if (Astro.request.method === "POST") {
         </select>
       </div>
       <template x-if="selectedType === 'one_time'">
-        <div class="flex flex-col gap-2">
+        <div
+          class="flex flex-col gap-2"
+          x-data="{
+              init() {
+                flatpickr(this.$refs.input, {
+                  static: true,
+                  enableTime: true,
+                  dateFormat: 'Y-m-d H:i',
+                  onChange: (selectedDates, dateStr) => {
+                    this.periodically = dateStr;
+                    this.selectedPeriodically = dateStr;
+                  },
+                });
+              }
+            }"
+          x-init="$nextTick(() => init())"
+        >
           <label for="periodically">Choose Time</label>
-          <div>
-            <button
-              type="button"
-              popovertarget="cally-popover-periodically"
-              class="input input-border w-full rounded-none"
-              id="cally-periodically"
-              style="anchor-name:--cally1"
-              x-text="periodicallyText"
-            >
-              Expired At
-            </button>
-            <input
-              type="hidden"
-              name="periodically"
-              id="periodically"
-              x-model="selectedPeriodically"
-            />
-            <div
-              popover
-              id="cally-popover-periodically"
-              class="dropdown bg-base-100 rounded-box shadow-lg"
-              style="position-anchor:--cally1"
-            >
-              <calendar-date
-                class="cally"
-                name="periodically"
-                @change="selectedPeriodically = $event.target.value; periodicallyText = $event.target.value; $nextTick(() => $el.closest('[x-data]').querySelector('[popover]').hidePopover())"
-              >
-                <svg
-                  aria-label="Previous"
-                  class="fill-current size-4"
-                  slot="previous"
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                  ><path d="M15.75 19.5 8.25 12l7.5-7.5"></path></svg
-                >
-                <svg
-                  aria-label="Next"
-                  class="fill-current size-4"
-                  slot="next"
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                  ><path d="m8.25 4.5 7.5 7.5-7.5 7.5"></path></svg
-                >
-                <calendar-month></calendar-month>
-              </calendar-date>
-            </div>
-          </div>
+          <input
+            type="text"
+            id="flatpickr-periodically"
+            class="input input-border w-full rounded-none"
+            placeholder="Select date & time"
+            x-ref="input"
+            x-model="periodicallyText"
+            readonly
+          />
+          <input
+            type="hidden"
+            name="periodically"
+            id="periodically"
+            :value="selectedPeriodically"
+          />
         </div>
       </template>
       <template x-if="selectedType === 'periodically'">
@@ -255,56 +238,39 @@ if (Astro.request.method === "POST") {
               :value="JSON.parse(selectedJob)?.cron_syntax"
             />
           </div>
-          <div class="flex flex-col gap-2">
+          <div
+            class="flex flex-col gap-2"
+            x-data="{
+              init() {
+                flatpickr(this.$refs.input, {
+                  static: true,
+                  enableTime: true,
+                  dateFormat: 'Y-m-d H:i',
+                  onChange: (selectedDates, dateStr) => {
+                    this.expiredAtText = dateStr;
+                    this.selectedExpiredAt = dateStr;
+                  },
+                });
+              }
+            }"
+            x-init="$nextTick(() => init())"
+          >
             <label for="validuntil">Valid Until</label>
-            <div>
-              <button
-                type="button"
-                popovertarget="cally-popover-validuntil"
-                class="input input-border w-full rounded-none"
-                id="cally-validuntil"
-                style="anchor-name:--cally1"
-                x-text="expiredAtText"
-              >
-                Expired At
-              </button>
-              <input
-                type="hidden"
-                name="validuntil"
-                id="validuntil"
-                x-model="selectedExpiredAt"
-              />
-              <div
-                popover
-                id="cally-popover-validuntil"
-                class="dropdown bg-base-100 rounded-box shadow-lg"
-                style="position-anchor:--cally1"
-              >
-                <calendar-date
-                  class="cally"
-                  name="validuntil"
-                  @change="selectedExpiredAt = $event.target.value; expiredAtText = $event.target.value; $nextTick(() => $el.closest('[x-data]').querySelector('[popover]').hidePopover())"
-                >
-                  <svg
-                    aria-label="Previous"
-                    class="fill-current size-4"
-                    slot="previous"
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 24 24"
-                    ><path d="M15.75 19.5 8.25 12l7.5-7.5"></path></svg
-                  >
-                  <svg
-                    aria-label="Next"
-                    class="fill-current size-4"
-                    slot="next"
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 24 24"
-                    ><path d="m8.25 4.5 7.5 7.5-7.5 7.5"></path></svg
-                  >
-                  <calendar-month></calendar-month>
-                </calendar-date>
-              </div>
-            </div>
+            <input
+              type="text"
+              id="flatpickr-validuntil"
+              class="input input-border w-full rounded-none"
+              placeholder="Select date & time"
+              x-ref="input"
+              x-model="expiredAtText"
+              readonly
+            />
+            <input
+              type="hidden"
+              name="validuntil"
+              id="validuntil"
+              :value="selectedExpiredAt"
+            />
           </div>
         </div>
       </template>
@@ -321,7 +287,11 @@ if (Astro.request.method === "POST") {
     </form>
   </div>
 </dialog>
-<script type="module" src="https://unpkg.com/cally"></script>
+<link
+  rel="stylesheet"
+  href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css"
+/>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script is:inline>
   const form = document.querySelector("#jobs_create_or_update_modal form");
 
