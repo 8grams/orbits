@@ -130,7 +130,7 @@ const jobs = await db.all(
             {
               jobs.map((job: any, idx: number) => (
                 <tr>
-                  <td>{idx + 1}</td>
+                  <td>{idx + 1}.</td>
                   <td>{job.name}</td>
                   <td class="capitalize">{job.type.replace("_", " ")}</td>
                   <td>
